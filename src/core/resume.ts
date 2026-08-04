@@ -30,6 +30,18 @@ export function renderResumeContext(claims: Claim[]): string {
   if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` — ${next.body}` : ""}`);
   L.push("");
 
+  const parked = claims.filter((c) => c.status === "needs_review");
+  if (parked.length) {
+    L.push("## ⚠️ CONFLICTS NEEDING ATTENTION (parked by the reconciler — resolve, don't act blindly)");
+    for (const c of parked) {
+      const against = c.conflicts_with ? claims.find((x) => x.id === c.conflicts_with) : undefined;
+      const vs = against ? `[${against.id}] "${against.title}" (${against.status})` : "an existing claim";
+      L.push(`- [${c.id}] "${c.title}" conflicts with ${vs}`);
+      if (c.body) L.push(`    → ${c.body}`);
+    }
+    L.push("");
+  }
+
   const frozen = by(claims, ["decision", "constraint", "architecture"], new Set(["frozen"]));
   if (frozen.length) {
     L.push("## 🔒 FROZEN — MUST NOT change");

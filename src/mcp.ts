@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Store } from "./core/store.js";
 import { renderResumeContext } from "./core/resume.js";
 import { commit, ensureRepo } from "./core/git.js";
+import { reconcile, CaptureOp } from "./core/reconcile.js";
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
 
@@ -110,6 +111,41 @@ server.tool(
     const c = s.record({ type, title, body, status: "open", confidence: "confirmed", origin: "auto" });
     save(s, `continuity: record ${type} ${c.id}`);
     return text(`Recorded ${type} [${c.id}]`);
+  },
+);
+
+server.tool(
+  "capture",
+  "Autonomously capture a BATCH of claim ops in one call, run through the reconciler (dedupe, lineage-preserving supersession, and a frozen-guard that parks anything that would contradict a frozen claim). Call resume_context first so you know existing ids and which are frozen. Ops: {op:'add'|'reject'|'supersede', type?, title, body?, reason?, confidence?, old?(for supersede), conflicts_with?(id/title of a claim it clashes with)}.",
+  {
+    ...projectArg,
+    ops: z
+      .array(
+        z.object({
+          op: z.enum(["add", "reject", "supersede"]),
+          type: z.string().optional(),
+          title: z.string(),
+          body: z.string().optional(),
+          reason: z.string().optional(),
+          confidence: z.enum(["confirmed", "tentative"]).optional(),
+          old: z.string().optional(),
+          conflicts_with: z.string().optional(),
+        }),
+      )
+      .describe("Batch of capture ops."),
+  },
+  async ({ project, ops }) => {
+    const s = resolveStore(project);
+    const r = reconcile(s, ops as CaptureOp[]);
+    save(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
+    const lines = [
+      `applied: ${r.applied.join(", ") || "none"}`,
+      `superseded: ${r.superseded.join("; ") || "none"}`,
+      `parked (need review): ${r.parked.join("; ") || "none"}`,
+      `duplicates skipped: ${r.duplicates.join("; ") || "none"}`,
+    ];
+    if (r.notes.length) lines.push(`notes: ${r.notes.join("; ")}`);
+    return text(lines.join("\n"));
   },
 );
 

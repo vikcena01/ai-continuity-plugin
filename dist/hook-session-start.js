@@ -3541,6 +3541,7 @@ function parseClaim(raw) {
     superseded_reason: data.superseded_reason,
     depends_on: data.depends_on ?? [],
     reason: data.reason,
+    conflicts_with: data.conflicts_with,
     tags: data.tags ?? []
   };
 }
@@ -3559,6 +3560,7 @@ function serializeClaim(c) {
   };
   if (c.superseded_reason) fm.superseded_reason = c.superseded_reason;
   if (c.reason) fm.reason = c.reason;
+  if (c.conflicts_with) fm.conflicts_with = c.conflicts_with;
   const clean = JSON.parse(JSON.stringify(fm));
   return import_gray_matter.default.stringify(`
 ${c.body}
@@ -3685,6 +3687,7 @@ var Store = class _Store {
       superseded_by: null,
       depends_on: input.depends_on ?? [],
       reason: input.reason,
+      conflicts_with: input.conflicts_with,
       tags: []
     };
     this.write(claim);
@@ -3741,6 +3744,17 @@ function renderResumeContext(claims2) {
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
   if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` \u2014 ${next.body}` : ""}`);
   L.push("");
+  const parked = claims2.filter((c) => c.status === "needs_review");
+  if (parked.length) {
+    L.push("## \u26A0\uFE0F CONFLICTS NEEDING ATTENTION (parked by the reconciler \u2014 resolve, don't act blindly)");
+    for (const c of parked) {
+      const against = c.conflicts_with ? claims2.find((x) => x.id === c.conflicts_with) : void 0;
+      const vs = against ? `[${against.id}] "${against.title}" (${against.status})` : "an existing claim";
+      L.push(`- [${c.id}] "${c.title}" conflicts with ${vs}`);
+      if (c.body) L.push(`    \u2192 ${c.body}`);
+    }
+    L.push("");
+  }
   const frozen = by(claims2, ["decision", "constraint", "architecture"], /* @__PURE__ */ new Set(["frozen"]));
   if (frozen.length) {
     L.push("## \u{1F512} FROZEN \u2014 MUST NOT change");

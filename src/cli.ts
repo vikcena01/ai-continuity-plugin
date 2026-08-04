@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { Store } from "./core/store.js";
 import { renderResumeContext } from "./core/resume.js";
 import { ClaimType, Claim, Confidence, Status } from "./core/claim.js";
 import { commit, ensureRepo, log as gitLog, revert } from "./core/git.js";
+import { reconcile, CaptureOp } from "./core/reconcile.js";
 
 function fail(msg: string): never {
   console.error(msg);
@@ -159,6 +161,18 @@ switch (cmd) {
     break;
   }
 
+  case "capture": {
+    const file = flag("file");
+    if (!file) fail('Usage: continuity capture --file ops.json   (JSON: {"ops":[...]} — runs the reconciler)');
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    const ops: CaptureOp[] = Array.isArray(parsed) ? parsed : parsed.ops;
+    const s = getStore();
+    const r = reconcile(s, ops);
+    saveMsg(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
+    console.log(JSON.stringify(r, null, 2));
+    break;
+  }
+
   case "log": {
     const s = getStore();
     const out = gitLog(s.gitDir, s.gitPath);
@@ -185,6 +199,7 @@ switch (cmd) {
   continuity record-constraint "title" [--body "..."]
   continuity record --type <type> "title" [--status open] [--body "..."]
   continuity reject "alternative" --reason "why"
+  continuity capture --file ops.json    (batch capture through the reconciler)
   continuity freeze <id-or-text>
   continuity supersede <old> <new> --reason "why"
   continuity why <id-or-text>

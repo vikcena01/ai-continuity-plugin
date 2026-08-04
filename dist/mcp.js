@@ -17465,13 +17465,13 @@ function _array(Class2, element, params) {
   });
 }
 function _custom(Class2, fn, _params) {
-  const norm = normalizeParams(_params);
-  norm.abort ?? (norm.abort = true);
+  const norm2 = normalizeParams(_params);
+  norm2.abort ?? (norm2.abort = true);
   const schema = new Class2({
     type: "custom",
     check: "custom",
     fn,
-    ...norm
+    ...norm2
   });
   return schema;
 }
@@ -24662,6 +24662,7 @@ function parseClaim(raw) {
     superseded_reason: data.superseded_reason,
     depends_on: data.depends_on ?? [],
     reason: data.reason,
+    conflicts_with: data.conflicts_with,
     tags: data.tags ?? []
   };
 }
@@ -24680,6 +24681,7 @@ function serializeClaim(c) {
   };
   if (c.superseded_reason) fm.superseded_reason = c.superseded_reason;
   if (c.reason) fm.reason = c.reason;
+  if (c.conflicts_with) fm.conflicts_with = c.conflicts_with;
   const clean = JSON.parse(JSON.stringify(fm));
   return import_gray_matter.default.stringify(`
 ${c.body}
@@ -24806,6 +24808,7 @@ var Store = class _Store {
       superseded_by: null,
       depends_on: input.depends_on ?? [],
       reason: input.reason,
+      conflicts_with: input.conflicts_with,
       tags: []
     };
     this.write(claim);
@@ -24862,6 +24865,17 @@ function renderResumeContext(claims) {
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
   if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` \u2014 ${next.body}` : ""}`);
   L.push("");
+  const parked = claims.filter((c) => c.status === "needs_review");
+  if (parked.length) {
+    L.push("## \u26A0\uFE0F CONFLICTS NEEDING ATTENTION (parked by the reconciler \u2014 resolve, don't act blindly)");
+    for (const c of parked) {
+      const against = c.conflicts_with ? claims.find((x) => x.id === c.conflicts_with) : void 0;
+      const vs = against ? `[${against.id}] "${against.title}" (${against.status})` : "an existing claim";
+      L.push(`- [${c.id}] "${c.title}" conflicts with ${vs}`);
+      if (c.body) L.push(`    \u2192 ${c.body}`);
+    }
+    L.push("");
+  }
   const frozen = by(claims, ["decision", "constraint", "architecture"], /* @__PURE__ */ new Set(["frozen"]));
   if (frozen.length) {
     L.push("## \u{1F512} FROZEN \u2014 MUST NOT change");
@@ -24959,6 +24973,89 @@ function commit(dir, addPath, message) {
   }
 }
 
+// src/core/reconcile.ts
+var LIVE2 = /* @__PURE__ */ new Set(["active", "accepted", "frozen", "open"]);
+var norm = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function findOne(store, q) {
+  const m = store.resolveClaims(q);
+  return m.length === 1 ? m[0] : void 0;
+}
+function reconcile(store, ops) {
+  const res = { applied: [], superseded: [], parked: [], duplicates: [], notes: [] };
+  for (const op of ops) {
+    const live = store.list().filter((c) => LIVE2.has(c.status));
+    if (op.op === "add" || op.op === "reject") {
+      const dup = live.find((c2) => norm(c2.title) === norm(op.title));
+      if (dup) {
+        res.duplicates.push(`${dup.id} ("${op.title}")`);
+        continue;
+      }
+      if (op.conflicts_with) {
+        const target = findOne(store, op.conflicts_with);
+        if (target && target.status === "frozen") {
+          const c2 = store.record({
+            type: op.op === "reject" ? "rejected_alternative" : op.type ?? "decision",
+            title: op.title,
+            body: op.body,
+            reason: op.reason,
+            status: "needs_review",
+            confidence: "tentative",
+            origin: "auto",
+            conflicts_with: target.id
+          });
+          res.parked.push(`${c2.id} conflicts with FROZEN ${target.id} \u2014 parked for review`);
+          continue;
+        }
+      }
+      const c = store.record({
+        type: op.op === "reject" ? "rejected_alternative" : op.type ?? "decision",
+        title: op.title,
+        body: op.body,
+        reason: op.reason,
+        status: op.op === "reject" ? "rejected" : "accepted",
+        confidence: op.confidence ?? "tentative",
+        origin: "auto"
+      });
+      res.applied.push(c.id);
+      continue;
+    }
+    if (op.op === "supersede") {
+      const old = op.old ? findOne(store, op.old) : void 0;
+      if (!old) {
+        res.notes.push(`supersede skipped: could not uniquely resolve "${op.old}"`);
+        continue;
+      }
+      if (old.status === "frozen") {
+        const c = store.record({
+          type: op.type ?? old.type,
+          title: op.title,
+          body: op.body,
+          reason: op.reason,
+          status: "needs_review",
+          confidence: "tentative",
+          origin: "auto",
+          conflicts_with: old.id
+        });
+        res.parked.push(`${c.id} would supersede FROZEN ${old.id} \u2014 parked for review`);
+        continue;
+      }
+      const fresh = store.record({
+        type: op.type ?? old.type,
+        title: op.title,
+        body: op.body,
+        status: "accepted",
+        confidence: op.confidence ?? "confirmed",
+        origin: "auto"
+      });
+      store.supersede(old.id, fresh.id, op.reason ?? "");
+      res.applied.push(fresh.id);
+      res.superseded.push(`${old.id} \u2192 ${fresh.id}`);
+      continue;
+    }
+  }
+  return res;
+}
+
 // src/mcp.ts
 var text = (t) => ({ content: [{ type: "text", text: t }] });
 function resolveStore(project) {
@@ -25047,6 +25144,38 @@ server.tool(
     const c = s.record({ type, title, body, status: "open", confidence: "confirmed", origin: "auto" });
     save(s, `continuity: record ${type} ${c.id}`);
     return text(`Recorded ${type} [${c.id}]`);
+  }
+);
+server.tool(
+  "capture",
+  "Autonomously capture a BATCH of claim ops in one call, run through the reconciler (dedupe, lineage-preserving supersession, and a frozen-guard that parks anything that would contradict a frozen claim). Call resume_context first so you know existing ids and which are frozen. Ops: {op:'add'|'reject'|'supersede', type?, title, body?, reason?, confidence?, old?(for supersede), conflicts_with?(id/title of a claim it clashes with)}.",
+  {
+    ...projectArg,
+    ops: external_exports.array(
+      external_exports.object({
+        op: external_exports.enum(["add", "reject", "supersede"]),
+        type: external_exports.string().optional(),
+        title: external_exports.string(),
+        body: external_exports.string().optional(),
+        reason: external_exports.string().optional(),
+        confidence: external_exports.enum(["confirmed", "tentative"]).optional(),
+        old: external_exports.string().optional(),
+        conflicts_with: external_exports.string().optional()
+      })
+    ).describe("Batch of capture ops.")
+  },
+  async ({ project, ops }) => {
+    const s = resolveStore(project);
+    const r = reconcile(s, ops);
+    save(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
+    const lines = [
+      `applied: ${r.applied.join(", ") || "none"}`,
+      `superseded: ${r.superseded.join("; ") || "none"}`,
+      `parked (need review): ${r.parked.join("; ") || "none"}`,
+      `duplicates skipped: ${r.duplicates.join("; ") || "none"}`
+    ];
+    if (r.notes.length) lines.push(`notes: ${r.notes.join("; ")}`);
+    return text(lines.join("\n"));
   }
 );
 server.tool(

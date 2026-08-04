@@ -149,6 +149,7 @@ export class Store {
     confidence?: Confidence;
     reason?: string;
     depends_on?: string[];
+    conflicts_with?: string;
     origin?: Provenance["origin"];
     session?: string;
     id?: string;
@@ -166,6 +167,7 @@ export class Store {
       superseded_by: null,
       depends_on: input.depends_on ?? [],
       reason: input.reason,
+      conflicts_with: input.conflicts_with,
       tags: [],
     };
     this.write(claim);
