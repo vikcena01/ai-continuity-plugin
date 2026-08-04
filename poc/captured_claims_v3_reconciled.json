@@ -1,0 +1,193 @@
+{
+  "claims": [
+    {
+      "op": "add",
+      "id": "mission",
+      "type": "mission",
+      "title": "Snip internal URL shortener backend",
+      "body": "Build Snip, an internal URL shortener for the company used by marketing and the docs team. Must create short links, redirect fast, and later track click analytics.",
+      "status": "active",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "postgres-primary-store",
+      "type": "decision",
+      "title": "PostgreSQL is the source of truth",
+      "body": "Standardize on PostgreSQL as the primary datastore. A Redis read cache may be added later if reads get hot, but Postgres remains source of truth. Settled \u2014 do not reopen.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "short-code-format",
+      "type": "decision",
+      "title": "Random 7-char base62 short codes",
+      "body": "Short codes are random, 7 characters, base62 \u2014 exactly. Chosen over sequential ids to prevent enumeration. Format is externally committed: marketing printed it and a partner contract references '7-character Snip codes'. Frozen.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "freeze",
+      "id": "short-code-format"
+    },
+    {
+      "op": "add",
+      "id": "collision-retry",
+      "type": "decision",
+      "title": "Unique constraint + retry on collision",
+      "body": "Handle random-code collisions with a unique constraint on the code column plus generate-check-retry on insert.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "redirect-302-indexed",
+      "type": "decision",
+      "title": "302 redirect via single indexed code lookup",
+      "body": "Redirect resolves via a single indexed lookup on the code column. Use HTTP 302 (not 301) to enable analytics interception later.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "async-click-tracking",
+      "type": "constraint",
+      "title": "Click tracking must not slow redirects",
+      "body": "Every redirect records a click event (timestamp, referrer, coarse geo) without slowing the redirect. The write path must be fire-and-forget/async.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "reject-kv-store",
+      "type": "rejected_alternative",
+      "title": "DynamoDB/Redis as source of truth",
+      "body": "AI proposed DynamoDB or Redis as the primary datastore.",
+      "status": "rejected",
+      "confidence": "confirmed",
+      "reason": "Standardizing on PostgreSQL which ops knows well; at expected volume a KV store is unwanted overhead. Redis allowed only as an optional later read cache, not source of truth."
+    },
+    {
+      "op": "add",
+      "id": "reject-autoincrement-ids",
+      "type": "rejected_alternative",
+      "title": "Auto-increment ids exposed in URLs",
+      "body": "AI proposed exposing the row's auto-increment id in the URL.",
+      "status": "rejected",
+      "confidence": "confirmed",
+      "reason": "Sequential ids are enumerable (walk /1,/2,/3 to scrape every link) and leak link counts. Rejected in favor of random 7-char base62."
+    },
+    {
+      "op": "add",
+      "id": "vanity-url-arbitration",
+      "type": "question",
+      "title": "How to reserve/arbitrate vanity codes",
+      "body": "Custom vanity URLs collide with the random code space; no decision yet on how to reserve or arbitrate them. Parked.",
+      "status": "open",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "analytics-milestone",
+      "type": "milestone",
+      "title": "Click analytics milestone",
+      "body": "Storage and redirect are done and deployed. Current milestone is click analytics.",
+      "status": "open",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "build-click-write-path",
+      "type": "next_action",
+      "title": "Build async click-tracking write path",
+      "body": "Build the click-tracking write path as fire-and-forget so redirects stay fast.",
+      "status": "open",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "analytics-logs-cloudwatch",
+      "type": "decision",
+      "title": "Emit click events to application logs / CloudWatch",
+      "body": "Week 7 idea: emit each click event to application logs / CloudWatch and parse into reports later.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "analytics-clicks-main-postgres",
+      "type": "decision",
+      "title": "Store click events in a clicks table in main Postgres",
+      "body": "Week 7 decision after scrapping the logs idea: store click events in a `clicks` table in the primary Postgres, next to the links.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "analytics-clickhouse-store",
+      "type": "decision",
+      "title": "Analytics goes into a separate ClickHouse store; Postgres serves links only",
+      "body": "Week 8 current decision: all click events go to a SEPARATE analytics store (ClickHouse) via the async write path. The primary Postgres serves ONLY links. Replaces both the logs idea and the clicks-in-main-Postgres plan.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "supersede",
+      "old_id": "analytics-logs-cloudwatch",
+      "new_id": "analytics-clickhouse-store",
+      "reason": "Logs/CloudWatch are hard to query for real analytics and retention gets expensive; superseded by the dedicated ClickHouse analytics store."
+    },
+    {
+      "op": "supersede",
+      "old_id": "analytics-clicks-main-postgres",
+      "new_id": "analytics-clickhouse-store",
+      "reason": "Load testing showed analytics inserts at real click volume bloat the primary Postgres and contend with link-serving reads, slowing redirects and violating the 'redirects must stay fast' rule; superseded by moving analytics to a separate ClickHouse store."
+    },
+    {
+      "op": "add",
+      "id": "build-click-write-path-clickhouse",
+      "type": "next_action",
+      "title": "Build async click-tracking write path shipping events to ClickHouse",
+      "body": "Build the async click-tracking write path that ships click events to ClickHouse without slowing the redirect.",
+      "status": "open",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "supersede",
+      "old_id": "build-click-write-path",
+      "new_id": "build-click-write-path-clickhouse",
+      "reason": "The write path's target store changed from the main Postgres clicks table to the separate ClickHouse analytics store following the Week 8 decision."
+    },
+    {
+      "op": "add",
+      "id": "use-301-permanent-redirects",
+      "type": "decision",
+      "title": "Use 301 permanent redirects for share links",
+      "body": "Switch public share-link redirects from 302 to 301 permanent so browsers and CDNs cache them and marketing gains SEO link equity. The 302 was originally kept as an analytics interception hook, but analytics now runs async to ClickHouse, so the hook is no longer needed.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "add",
+      "id": "8-char-campaign-codes",
+      "type": "decision",
+      "title": "Support 8-character codes for campaign namespace",
+      "body": "Add a 'campaign codes' namespace for human-readable-ish codes used in big marketing pushes. To avoid collisions with the existing code space, campaign codes are allowed to be 8 characters.",
+      "status": "accepted",
+      "confidence": "confirmed"
+    },
+    {
+      "op": "supersede",
+      "old_id": "redirect-302-indexed",
+      "new_id": "use-301-permanent-redirects",
+      "reason": "[AUTO-RECONCILED] 302's sole justification was analytics interception; analytics now runs async to ClickHouse, so 301 permanent redirects (browser/CDN caching + SEO) supersede it."
+    },
+    {
+      "op": "flag_conflict",
+      "loser_id": "8-char-campaign-codes",
+      "against_id": "short-code-format",
+      "note": "New 8-char campaign codes clash with the FROZEN 7-char base62 format, which is externally committed (marketing + partner contract referencing '7-character Snip codes'). Cannot be auto-adopted. Whether a separate campaign namespace is exempt from the contractual 7-char guarantee is a human decision. New claim parked; frozen claim untouched."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "continuity",
+  "displayName": "Continuity",
+  "version": "0.1.0",
+  "description": "Portable, git-backed project-state. Resume any session without losing decisions, constraints, or direction.",
+  "author": {
+    "name": "vikash",
+    "email": "vikcena01@gmail.com"
+  },
+  "keywords": ["continuity", "memory", "project-state", "mcp", "resume"],
+  "commands": ["./commands/resume.md", "./commands/freeze.md", "./commands/why.md"],
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}

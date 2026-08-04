@@ -1,0 +1,197 @@
+#!/usr/bin/env node
+import { Store } from "./core/store.js";
+import { renderResumeContext } from "./core/resume.js";
+import { ClaimType, Claim, Confidence, Status } from "./core/claim.js";
+import { commit, ensureRepo, log as gitLog, revert } from "./core/git.js";
+
+function fail(msg: string): never {
+  console.error(msg);
+  process.exit(1);
+}
+
+const [cmd, ...rest] = process.argv.slice(2);
+
+function flag(name: string): string | undefined {
+  const i = rest.indexOf(`--${name}`);
+  return i >= 0 ? rest[i + 1] : undefined;
+}
+
+function positionals(): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i].startsWith("--")) {
+      i++; // skip flag value
+      continue;
+    }
+    out.push(rest[i]);
+  }
+  return out;
+}
+
+function getStore(): Store {
+  const s = Store.resolve({ project: flag("project") });
+  if (!s) {
+    const known = Store.listProjects().join(", ") || "none";
+    fail(`No project selected. Use --project <name>, or run 'continuity init' in a repo. Known projects: ${known}`);
+  }
+  return s;
+}
+
+function saveMsg(s: Store, msg: string): void {
+  commit(s.gitDir, s.gitPath, msg);
+}
+
+function resolveOne(s: Store, query: string): Claim {
+  const matches = s.resolveClaims(query);
+  if (matches.length === 0) fail(`No claim matches "${query}".`);
+  if (matches.length > 1) {
+    console.error(`Ambiguous "${query}" — matches:`);
+    for (const c of matches) console.error(`  ${c.id}  ${c.title}`);
+    process.exit(1);
+  }
+  return matches[0];
+}
+
+switch (cmd) {
+  case "init": {
+    const project = flag("project");
+    const s = project ? Store.forProject(project) : Store.forRepoAt(process.cwd());
+    ensureRepo(s.gitDir);
+    s.init(positionals().join(" ") || undefined);
+    saveMsg(s, `continuity: init${project ? ` project ${project}` : ""}`);
+    console.log(project ? `Initialized project "${project}" at ${s.root}` : `Initialized .continuity/ (repo mode) at ${s.root}`);
+    break;
+  }
+
+  case "resume": {
+    process.stdout.write(renderResumeContext(getStore().list()));
+    break;
+  }
+
+  case "projects": {
+    const ps = Store.listProjects();
+    console.log(ps.length ? ps.join("\n") : "(no named projects yet — `continuity init --project <name>`)");
+    break;
+  }
+
+  case "record-decision":
+  case "record-constraint": {
+    const title = positionals().join(" ");
+    if (!title) fail(`Usage: continuity ${cmd} "title" [--body "..."] [--confidence confirmed|tentative]`);
+    const type: ClaimType = cmd === "record-constraint" ? "constraint" : "decision";
+    const s = getStore();
+    const c = s.record({ type, title, body: flag("body"), confidence: (flag("confidence") as Confidence) ?? "confirmed" });
+    saveMsg(s, `continuity: record ${type} ${c.id}`);
+    console.log(`Recorded ${type} [${c.id}]`);
+    break;
+  }
+
+  case "record": {
+    const title = positionals().join(" ");
+    const type = flag("type") as ClaimType | undefined;
+    if (!title || !type) fail('Usage: continuity record --type <type> "title" [--status open] [--body "..."] [--confidence ...] [--reason "..."]');
+    const s = getStore();
+    const c = s.record({
+      type,
+      title,
+      body: flag("body"),
+      status: flag("status") as Status | undefined,
+      confidence: flag("confidence") as Confidence | undefined,
+      reason: flag("reason"),
+    });
+    saveMsg(s, `continuity: record ${type} ${c.id}`);
+    console.log(`Recorded ${type} [${c.id}] (${c.status})`);
+    break;
+  }
+
+  case "reject": {
+    const title = positionals().join(" ");
+    if (!title) fail('Usage: continuity reject "alternative" --reason "why"');
+    const s = getStore();
+    const c = s.record({ type: "rejected_alternative", title, status: "rejected", reason: flag("reason"), confidence: "confirmed" });
+    saveMsg(s, `continuity: reject ${c.id}`);
+    console.log(`Recorded rejection [${c.id}]`);
+    break;
+  }
+
+  case "freeze": {
+    const q = positionals()[0];
+    if (!q) fail("Usage: continuity freeze <id-or-text>");
+    const s = getStore();
+    const c = resolveOne(s, q);
+    s.freeze(c.id);
+    saveMsg(s, `continuity: freeze ${c.id}`);
+    console.log(`Froze [${c.id}] ${c.title} — will not change without an explicit override.`);
+    break;
+  }
+
+  case "supersede": {
+    const [oldQ, newQ] = positionals();
+    if (!oldQ || !newQ) fail('Usage: continuity supersede <old-id-or-text> <new-id-or-text> --reason "why"');
+    const s = getStore();
+    const oldC = resolveOne(s, oldQ);
+    const newC = resolveOne(s, newQ);
+    s.supersede(oldC.id, newC.id, flag("reason") ?? "");
+    saveMsg(s, `continuity: supersede ${oldC.id} -> ${newC.id}`);
+    console.log(`[${oldC.id}] superseded by [${newC.id}] (archived, not deleted)`);
+    break;
+  }
+
+  case "why": {
+    const q = positionals()[0];
+    if (!q) fail("Usage: continuity why <id-or-text>");
+    const s = getStore();
+    const cur = resolveOne(s, q);
+    console.log(`CURRENT: [${cur.id}] ${cur.title}  (status: ${cur.status})`);
+    const replaced = s.list().filter((c) => c.superseded_by === cur.id);
+    if (!replaced.length) console.log("  (supersedes nothing — original decision)");
+    for (const r of replaced) {
+      console.log(`  ↑ replaced [${r.id}] ${r.title}`);
+      console.log(`      because: ${r.superseded_reason ?? ""}`);
+    }
+    break;
+  }
+
+  case "list": {
+    for (const c of getStore().list()) {
+      console.log(`[${c.status.padStart(12)}] ${c.type.padStart(20)}  ${c.id.padEnd(8)}  ${c.title}`);
+    }
+    break;
+  }
+
+  case "log": {
+    const s = getStore();
+    const out = gitLog(s.gitDir, s.gitPath);
+    console.log(out || "(no git history — is this a git repo?)");
+    break;
+  }
+
+  case "rollback": {
+    const ref = positionals()[0];
+    if (!ref) fail("Usage: continuity rollback <commit-ref>   (creates a revert commit)");
+    const s = getStore();
+    revert(s.gitDir, ref);
+    console.log(`Reverted ${ref} (a new commit undoing it was created).`);
+    break;
+  }
+
+  default:
+    console.log(`continuity — portable, git-backed project-state for AI sessions
+
+  continuity init ["mission"] [--project <name>]
+  continuity projects
+  continuity resume [--project <name>]
+  continuity record-decision "title" [--body "..."] [--confidence confirmed|tentative]
+  continuity record-constraint "title" [--body "..."]
+  continuity record --type <type> "title" [--status open] [--body "..."]
+  continuity reject "alternative" --reason "why"
+  continuity freeze <id-or-text>
+  continuity supersede <old> <new> --reason "why"
+  continuity why <id-or-text>
+  continuity list
+  continuity log
+  continuity rollback <commit-ref>
+
+  --project <name> selects a named central project (~/.continuity/projects/<name>);
+  omit it inside a repo that has .continuity/.`);
+}
