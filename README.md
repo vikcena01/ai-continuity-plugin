@@ -13,11 +13,23 @@ It is **not a memory tool.** A memory tool answers *"what did we talk about?"* C
 
 See [`DESIGN.md`](DESIGN.md) for the full architecture and [`poc/`](poc/) for the validation that motivated it.
 
-## Install (dev)
+## Install (as a Claude plugin)
+
+Continuity is a Claude Code plugin, distributed through a plugin marketplace — same as any plugin on [claude.com/plugins](https://claude.com/plugins). It runs everywhere Claude Code runs: the **terminal, the desktop app, and web**. In Claude Code:
+
+```
+/plugin marketplace add vikash/ai-continuity-layer
+/plugin install continuity@continuity-marketplace
+```
+
+That's it — the bundled MCP server, the `continuity` skill (auto-resume + auto-capture), the SessionStart hook, and the `/resume` `/freeze` `/why` commands all install together. `dist/` is committed and dependency-free, so there's no build step on install.
+
+### Local development
 
 ```bash
 npm install
-npm run build
+npm run build   # typecheck + bundle to dist/
+npm test        # build + asserted smoke test
 ```
 
 ## The loop (CLI)

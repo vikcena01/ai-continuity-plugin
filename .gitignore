@@ -1,3 +1,4 @@
 node_modules/
-dist/
 *.log
+# dist/ is committed on purpose: the plugin's MCP server runs from bundled dist/
+# files so it installs with zero dependencies (no npm install step).

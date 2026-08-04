@@ -7,7 +7,9 @@
     "continuity": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "bundle": "esbuild src/cli.ts src/mcp.ts src/hook-session-start.ts --bundle --platform=node --format=esm --outdir=dist --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\"",
+    "build": "npm run typecheck && npm run bundle",
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/mcp.ts",
     "test": "npm run build && bash test/smoke.sh"
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "esbuild": "^0.23.0",
     "tsx": "^4.16.0",
     "typescript": "^5.5.0"
   }

@@ -1,0 +1,20 @@
+{
+  "name": "continuity-marketplace",
+  "owner": {
+    "name": "vikash",
+    "email": "vikcena01@gmail.com"
+  },
+  "metadata": {
+    "description": "Portable, git-backed project-state for long-running AI work",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "continuity",
+      "source": "./",
+      "description": "Resume any AI session without losing decisions, constraints, or direction. Deterministic, versioned project-state — not a memory/search tool.",
+      "version": "0.1.0",
+      "strict": true
+    }
+  ]
+}

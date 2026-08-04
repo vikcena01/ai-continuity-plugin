@@ -1,0 +1,79 @@
+const LIVE = new Set(["active", "accepted", "frozen", "open"]);
+function by(claims, types, statuses) {
+    return claims.filter((c) => types.includes(c.type) && (!statuses || statuses.has(c.status)));
+}
+/**
+ * Deterministic projection of the claim set into the compact context a fresh
+ * session needs. Pure function, NO LLM — this is the trustworthy core.
+ *
+ * Surfaces only current state, but deliberately keeps two things a naive
+ * summary drops: rejected alternatives (as guardrails) and, under each current
+ * decision, the reason it replaced an earlier one (so the reversal can't be
+ * re-litigated).
+ */
+export function renderResumeContext(claims) {
+    const L = [];
+    const predecessors = (id) => claims.filter((c) => c.superseded_by === id);
+    const mission = by(claims, ["mission"], LIVE)[0];
+    const milestone = by(claims, ["milestone"], new Set(["open"]))[0];
+    const next = by(claims, ["next_action"], new Set(["open"]))[0];
+    L.push(`# RESUME CONTEXT${mission ? ` — ${mission.title}` : ""}`);
+    if (mission?.body)
+        L.push(`_${mission.body}_`);
+    L.push("");
+    if (milestone)
+        L.push(`**Current milestone:** ${milestone.title}`);
+    if (next)
+        L.push(`**Resume at:** ${next.title}${next.body ? ` — ${next.body}` : ""}`);
+    L.push("");
+    const frozen = by(claims, ["decision", "constraint", "architecture"], new Set(["frozen"]));
+    if (frozen.length) {
+        L.push("## 🔒 FROZEN — MUST NOT change");
+        for (const c of frozen) {
+            L.push(`- [${c.id}] ${c.title}${c.body ? ` — ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+        }
+        L.push("");
+    }
+    const decisions = by(claims, ["decision", "architecture"], new Set(["accepted", "active"]));
+    if (decisions.length) {
+        L.push("## Active decisions & architecture");
+        for (const c of decisions) {
+            L.push(`- [${c.id}] ${c.title}${c.body ? ` — ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+            for (const p of predecessors(c.id)) {
+                L.push(`    ↳ replaced [${p.id}] "${p.title}" — because: ${p.superseded_reason ?? ""}`);
+            }
+        }
+        L.push("");
+    }
+    const cons = by(claims, ["constraint"], new Set(["accepted", "active"]));
+    if (cons.length) {
+        L.push("## Active constraints");
+        for (const c of cons) {
+            L.push(`- [${c.id}] ${c.title}${c.body ? ` — ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+        }
+        L.push("");
+    }
+    const rejected = [
+        ...by(claims, ["rejected_alternative"]),
+        ...by(claims, ["hypothesis"], new Set(["rejected"])),
+    ];
+    if (rejected.length) {
+        L.push("## 🚫 Do NOT revisit (already rejected — do not re-propose)");
+        for (const c of rejected) {
+            L.push(`- [${c.id}] ${c.title} — REJECTED because: ${c.reason ?? c.body}`);
+        }
+        L.push("");
+    }
+    const opens = by(claims, ["question", "risk"], new Set(["open"]));
+    if (opens.length) {
+        L.push("## Open questions / risks");
+        for (const c of opens) {
+            L.push(`- [${c.id}] ${c.title}${c.body ? ` — ${c.body}` : ""}`);
+        }
+        L.push("");
+    }
+    const hasContent = L.some((l) => l.startsWith("- ") || l.startsWith("**"));
+    if (!hasContent)
+        L.push("_No project state captured yet. Record decisions as you make them._");
+    return `${L.join("\n").trimEnd()}\n`;
+}
