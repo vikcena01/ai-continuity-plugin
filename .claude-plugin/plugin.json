@@ -8,8 +8,10 @@
     "email": "vikcena01@gmail.com"
   },
   "keywords": ["continuity", "memory", "project-state", "mcp", "resume"],
-  "skills": "./skills/",
-  "commands": ["./commands/resume.md", "./commands/freeze.md", "./commands/why.md"],
-  "hooks": "./hooks/hooks.json",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": {
+    "continuity": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/mcp.js"]
+    }
+  }
 }
