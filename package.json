@@ -1,7 +1,7 @@
 {
   "name": "continuity",
   "version": "1.0.0",
-  "description": "Portable, git-backed project-state for long-running AI work. Resume any AI session without losing decisions, constraints, or direction.",
+  "description": "Durable project state across AI sessions: decisions, constraints, and rejected paths, versioned in git as plain markdown. Not a memory tool — it answers what is true about the project now, and what must not change.",
   "license": "MIT",
   "repository": {
     "type": "git",
