@@ -39,7 +39,7 @@ function readHookInput() {
 var THROTTLE_MS = 1e4;
 var input = await readHookInput();
 if (input.stop_hook_active || !throttle("stop", input.session_id, THROTTLE_MS)) process.exit(0);
-var additionalContext = "Continuity auto-capture check. Review what happened in THIS turn. If the user settled a DECISION, set a CONSTRAINT, or REJECTED an approach \u2014 or a milestone/next step changed \u2014 record each now via the continuity MCP tools (record_decision / record_constraint / record_rejection / record_open), including the reasoning; use the `capture` tool for several at once. Keep each claim to one crisp fact and capture only what a future session would need \u2014 skip idle chatter. If there is nothing worth capturing, just stop.";
+var additionalContext = "Continuity capture check. Default to capturing NOTHING; most turns warrant nothing. Record only if this turn produced something a future session could not re-derive: a DECISION the user settled, a CONSTRAINT they set, an approach they REJECTED, or a genuinely new finding. Do NOT record: your own explanations, restatements of existing claims, progress narration, or a next_action rewrite unless the next step actually changed. Before adding, check whether an existing claim already covers it \u2014 prefer superseding one claim over adding a near-duplicate. Keep each claim to one crisp fact with its reason, and keep bodies short: they are re-read in every future session. If in doubt, stop without capturing.";
 process.stdout.write(
   JSON.stringify({
     decision: "block",

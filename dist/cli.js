@@ -3992,6 +3992,11 @@ function project(claims, meta, o, level) {
       "State is in a CENTRAL project (~/.continuity), not in the repo \u2014 it will NOT reach anyone who clones this project. Use repo mode for shared work."
     );
   }
+  if (meta.unreviewed && meta.unreviewed > 0) {
+    sync.push(
+      `${meta.unreviewed} captured change${meta.unreviewed === 1 ? "" : "s"} not yet reviewed \u2014 run \`continuity review\` to see what was written and why. Autonomous capture is only trustworthy if someone looks.`
+    );
+  }
   if (meta.unpushed && meta.unpushed > 0) {
     sync.push(
       `${meta.unpushed} captured commit${meta.unpushed === 1 ? "" : "s"} not pushed \u2014 teammates pulling now will see stale state. Push when convenient.`
@@ -4406,7 +4411,7 @@ switch (cmd) {
   case "resume": {
     {
       const s = getStore();
-      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }, resumeOptionsFromEnv()));
+      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath), unreviewed: review(s).changes.length }, resumeOptionsFromEnv()));
     }
     break;
   }

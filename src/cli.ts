@@ -82,7 +82,7 @@ switch (cmd) {
   case "resume": {
     {
       const s = getStore();
-      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }, resumeOptionsFromEnv()));
+      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath), unreviewed: review(s).changes.length }, resumeOptionsFromEnv()));
     }
     break;
   }

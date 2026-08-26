@@ -20,12 +20,21 @@ const input = await readHookInput<{ stop_hook_active?: boolean; session_id?: str
 // Guard 2: time throttle (loop backstop, independent of guard 1).
 if (input.stop_hook_active || !throttle("stop", input.session_id, THROTTLE_MS)) process.exit(0);
 
+// Deliberately biased AGAINST capturing. Measured on 2026-08-26: this hook fired
+// on every turn, including pure Q&A turns with no project state in them, and
+// produced ~20 next_action supersessions in a single day, each rewriting a long
+// body. Volume is not evidence of value — a claim set that restates itself is
+// harder to read than a small one, and every claim is paid for again in every
+// future session's resume context.
 const additionalContext =
-  "Continuity auto-capture check. Review what happened in THIS turn. " +
-  "If the user settled a DECISION, set a CONSTRAINT, or REJECTED an approach — or a milestone/next step changed — " +
-  "record each now via the continuity MCP tools (record_decision / record_constraint / record_rejection / record_open), " +
-  "including the reasoning; use the `capture` tool for several at once. Keep each claim to one crisp fact and capture " +
-  "only what a future session would need — skip idle chatter. If there is nothing worth capturing, just stop.";
+  "Continuity capture check. Default to capturing NOTHING; most turns warrant nothing. " +
+  "Record only if this turn produced something a future session could not re-derive: a DECISION the user " +
+  "settled, a CONSTRAINT they set, an approach they REJECTED, or a genuinely new finding. " +
+  "Do NOT record: your own explanations, restatements of existing claims, progress narration, or a " +
+  "next_action rewrite unless the next step actually changed. " +
+  "Before adding, check whether an existing claim already covers it — prefer superseding one claim over " +
+  "adding a near-duplicate. Keep each claim to one crisp fact with its reason, and keep bodies short: " +
+  "they are re-read in every future session. If in doubt, stop without capturing.";
 
 process.stdout.write(
   JSON.stringify({

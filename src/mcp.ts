@@ -6,6 +6,7 @@ import { renderResumeContext, resumeOptionsFromEnv } from "./core/resume.js";
 import { commit, ensureRepo, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
 import { resolveClaim } from "./core/resolve.js";
+import { review } from "./core/review.js";
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
 
@@ -25,7 +26,7 @@ function resolveStore(project?: string): Store {
 
 /** Resume context plus the where-does-this-live facts (central-mode + unpushed warnings). */
 function renderFor(s: Store): string {
-  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }, resumeOptionsFromEnv());
+  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath), unreviewed: review(s).changes.length }, resumeOptionsFromEnv());
 }
 
 function save(s: Store, msg: string): void {
@@ -40,7 +41,9 @@ const server = new McpServer(
       "At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: " +
       "treat FROZEN items and rejected alternatives as authoritative — do not re-open or re-propose them. " +
       "As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection " +
-      "(capture is autonomous — no need to ask permission; the user reviews the git history later). " +
+      "(capture is autonomous — no need to ask permission). Capture SPARINGLY: only what a future session could not re-derive, never " +
+      "restatements of existing claims or progress narration, and keep bodies short because they are re-read every session. " +
+      "Prefer superseding an existing claim over adding a near-duplicate. " +
       "Only call freeze_claim when the user explicitly wants something locked as unchangeable. " +
       "If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason.",
   },

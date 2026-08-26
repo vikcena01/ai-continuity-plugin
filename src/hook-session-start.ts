@@ -4,6 +4,7 @@ import { Store } from "./core/store.js";
 import { renderResumeContext, resumeOptionsFromEnv } from "./core/resume.js";
 import { unpushedCount } from "./core/git.js";
 import { readHookInput, throttle } from "./core/once.js";
+import { review } from "./core/review.js";
 
 const input = await readHookInput<{ session_id?: string }>();
 
@@ -24,7 +25,13 @@ if (claims.length) {
     "🚫 rejected alternatives as authoritative — do not re-open or re-propose them.\n\n" +
     renderResumeContext(
       claims,
-      store ? { mode: store.mode, unpushed: unpushedCount(store.gitDir, store.gitPath) } : {},
+      store
+        ? {
+            mode: store.mode,
+            unpushed: unpushedCount(store.gitDir, store.gitPath),
+            unreviewed: review(store).changes.length,
+          }
+        : {},
       resumeOptionsFromEnv(),
     );
 

@@ -3634,6 +3634,29 @@ function unpushedCount(dir, addPath) {
     return null;
   }
 }
+function lsFiles(dir, ref, path) {
+  try {
+    return git(dir, ["ls-tree", "-r", "--name-only", ref, "--", path]).split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+function showBlob(dir, ref, file) {
+  try {
+    return git(dir, ["show", `${ref}:${file}`]);
+  } catch {
+    return null;
+  }
+}
+function revListSince(dir, path, ref) {
+  if (!ref) return 0;
+  try {
+    const n = Number(git(dir, ["rev-list", "--count", `${ref}..HEAD`, "--", path]).trim());
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
 
 // src/core/store.ts
 var STATE_DIR = ".continuity";
@@ -3885,6 +3908,11 @@ function project(claims2, meta, o, level) {
       "State is in a CENTRAL project (~/.continuity), not in the repo \u2014 it will NOT reach anyone who clones this project. Use repo mode for shared work."
     );
   }
+  if (meta.unreviewed && meta.unreviewed > 0) {
+    sync.push(
+      `${meta.unreviewed} captured change${meta.unreviewed === 1 ? "" : "s"} not yet reviewed \u2014 run \`continuity review\` to see what was written and why. Autonomous capture is only trustworthy if someone looks.`
+    );
+  }
   if (meta.unpushed && meta.unpushed > 0) {
     sync.push(
       `${meta.unpushed} captured commit${meta.unpushed === 1 ? "" : "s"} not pushed \u2014 teammates pulling now will see stale state. Push when convenient.`
@@ -4019,6 +4047,61 @@ function readHookInput() {
   });
 }
 
+// src/core/review.ts
+import { existsSync as existsSync3, readFileSync as readFileSync3, writeFileSync as writeFileSync3 } from "node:fs";
+import { join as join3 } from "node:path";
+var MARKER = "REVIEWED";
+function claimsAt(s, ref) {
+  const m = /* @__PURE__ */ new Map();
+  for (const f of lsFiles(s.gitDir, ref, s.claimsGitPath)) {
+    if (!f.endsWith(".md")) continue;
+    const raw = showBlob(s.gitDir, ref, f);
+    if (!raw) continue;
+    try {
+      const c = parseClaim(raw, f);
+      m.set(c.id, c);
+    } catch {
+    }
+  }
+  return m;
+}
+function markerPath(s) {
+  return join3(s.root, MARKER);
+}
+function lastReviewed(s) {
+  const p = markerPath(s);
+  if (!existsSync3(p)) return null;
+  const v = readFileSync3(p, "utf8").trim();
+  return v || null;
+}
+function review(s) {
+  const since = lastReviewed(s);
+  const now = s.list();
+  const before = since ? claimsAt(s, since) : /* @__PURE__ */ new Map();
+  const changes = [];
+  for (const c of now) {
+    const old = before.get(c.id);
+    if (!since) continue;
+    if (!old) {
+      changes.push({ kind: "added", claim: c, detail: c.reason ?? c.body });
+      continue;
+    }
+    if (old.status !== c.status) {
+      changes.push({
+        kind: c.status === "superseded" ? "superseded" : "status",
+        claim: c,
+        from: old.status,
+        detail: c.superseded_reason ?? c.resolution ?? void 0
+      });
+      continue;
+    }
+    if (old.title !== c.title || old.body !== c.body) {
+      changes.push({ kind: "edited", claim: c, detail: old.title !== c.title ? `was: "${old.title}"` : void 0 });
+    }
+  }
+  return { since, commits: revListSince(s.gitDir, s.gitPath, since), changes };
+}
+
 // src/hook-session-start.ts
 var input = await readHookInput();
 if (input.session_id && !throttle("start", input.session_id, 5e3)) process.exit(0);
@@ -4028,7 +4111,11 @@ var claims = store?.list() ?? [];
 if (claims.length) {
   const additionalContext = "Restored project state from the Continuity layer. Treat \u{1F512} FROZEN items and \u{1F6AB} rejected alternatives as authoritative \u2014 do not re-open or re-propose them.\n\n" + renderResumeContext(
     claims,
-    store ? { mode: store.mode, unpushed: unpushedCount(store.gitDir, store.gitPath) } : {},
+    store ? {
+      mode: store.mode,
+      unpushed: unpushedCount(store.gitDir, store.gitPath),
+      unreviewed: review(store).changes.length
+    } : {},
     resumeOptionsFromEnv()
   );
   process.stdout.write(

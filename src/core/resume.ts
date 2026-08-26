@@ -9,6 +9,8 @@ export interface ResumeMeta {
   mode?: "repo" | "central";
   /** Captured commits not yet on the upstream, or null if there is no upstream. */
   unpushed?: number | null;
+  /** Claims written since the last `continuity review`, or null if never reviewed. */
+  unreviewed?: number | null;
 }
 
 /**
@@ -104,6 +106,13 @@ function project(claims: Claim[], meta: ResumeMeta, o: Required<ResumeOptions>, 
     sync.push(
       "State is in a CENTRAL project (~/.continuity), not in the repo — it will NOT " +
         "reach anyone who clones this project. Use repo mode for shared work.",
+    );
+  }
+  if (meta.unreviewed && meta.unreviewed > 0) {
+    sync.push(
+      `${meta.unreviewed} captured change${meta.unreviewed === 1 ? "" : "s"} not yet reviewed — ` +
+        "run `continuity review` to see what was written and why. Autonomous capture is only " +
+        "trustworthy if someone looks.",
     );
   }
   if (meta.unpushed && meta.unpushed > 0) {
