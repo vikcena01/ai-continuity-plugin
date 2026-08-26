@@ -3521,7 +3521,7 @@ var require_gray_matter = __commonJS({
 });
 
 // src/cli.ts
-import { readFileSync as readFileSync2 } from "node:fs";
+import { readFileSync as readFileSync3 } from "node:fs";
 
 // src/core/store.ts
 import { randomBytes } from "node:crypto";
@@ -3708,6 +3708,29 @@ function unpushedCount(dir, addPath) {
     return null;
   }
 }
+function lsFiles(dir, ref, path) {
+  try {
+    return git(dir, ["ls-tree", "-r", "--name-only", ref, "--", path]).split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+function showBlob(dir, ref, file) {
+  try {
+    return git(dir, ["show", `${ref}:${file}`]);
+  } catch {
+    return null;
+  }
+}
+function revListSince(dir, path, ref) {
+  if (!ref) return 0;
+  try {
+    const n = Number(git(dir, ["rev-list", "--count", `${ref}..HEAD`, "--", path]).trim());
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
 function log(dir, addPath, n = 20) {
   try {
     return git(dir, ["log", `-n${n}`, "--oneline", "--", addPath]).trimEnd();
@@ -3763,6 +3786,10 @@ var Store = class _Store {
   /** Human-readable location, for telling the user which store they are writing to. */
   get label() {
     return this.mode === "repo" ? this.gitDir : `central project "${basename(this.root)}"`;
+  }
+  /** Path to claims/ relative to gitDir — differs between repo and central mode. */
+  get claimsGitPath() {
+    return this.gitPath === "." ? CLAIMS : join(this.gitPath, CLAIMS);
   }
   claimsDir() {
     return join(this.root, CLAIMS);
@@ -4224,6 +4251,98 @@ function resolveClaim(store, input) {
   return { id: fresh.id, title: fresh.title, from, to, action, superseded };
 }
 
+// src/core/review.ts
+import { existsSync as existsSync2, readFileSync as readFileSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { join as join2 } from "node:path";
+var MARKER = "REVIEWED";
+function claimsAt(s, ref) {
+  const m = /* @__PURE__ */ new Map();
+  for (const f of lsFiles(s.gitDir, ref, s.claimsGitPath)) {
+    if (!f.endsWith(".md")) continue;
+    const raw = showBlob(s.gitDir, ref, f);
+    if (!raw) continue;
+    try {
+      const c = parseClaim(raw, f);
+      m.set(c.id, c);
+    } catch {
+    }
+  }
+  return m;
+}
+function markerPath(s) {
+  return join2(s.root, MARKER);
+}
+function lastReviewed(s) {
+  const p = markerPath(s);
+  if (!existsSync2(p)) return null;
+  const v = readFileSync2(p, "utf8").trim();
+  return v || null;
+}
+function markReviewed(s, ref) {
+  writeFileSync2(markerPath(s), `${ref}
+`);
+}
+function review(s) {
+  const since = lastReviewed(s);
+  const now = s.list();
+  const before = since ? claimsAt(s, since) : /* @__PURE__ */ new Map();
+  const changes = [];
+  for (const c of now) {
+    const old = before.get(c.id);
+    if (!since) continue;
+    if (!old) {
+      changes.push({ kind: "added", claim: c, detail: c.reason ?? c.body });
+      continue;
+    }
+    if (old.status !== c.status) {
+      changes.push({
+        kind: c.status === "superseded" ? "superseded" : "status",
+        claim: c,
+        from: old.status,
+        detail: c.superseded_reason ?? c.resolution ?? void 0
+      });
+      continue;
+    }
+    if (old.title !== c.title || old.body !== c.body) {
+      changes.push({ kind: "edited", claim: c, detail: old.title !== c.title ? `was: "${old.title}"` : void 0 });
+    }
+  }
+  return { since, commits: revListSince(s.gitDir, s.gitPath, since), changes };
+}
+var LABEL = {
+  added: "NEW",
+  status: "STATUS",
+  superseded: "REPLACED",
+  edited: "EDITED"
+};
+function renderReview(r, total) {
+  const L = [];
+  if (!r.since) {
+    L.push(`No review marker yet \u2014 ${total} claims currently on record.`);
+    L.push("Read them with `continuity list`, then `continuity review --accept` to start tracking");
+    L.push("changes from here. After that this command shows only what moved since.");
+    return `${L.join("\n")}
+`;
+  }
+  L.push(`Since ${r.since} \u2014 ${r.commits} commit${r.commits === 1 ? "" : "s"} touching state.`);
+  L.push("");
+  if (!r.changes.length) {
+    L.push("Nothing changed. State is as you last reviewed it.");
+    return `${L.join("\n")}
+`;
+  }
+  for (const c of r.changes) {
+    const from = c.from ? ` (${c.from} -> ${c.claim.status})` : "";
+    L.push(`${LABEL[c.kind].padStart(9)}  [${c.claim.id}] ${c.claim.title}${from}`);
+    if (c.detail) L.push(`           why: ${c.detail.replace(/\s+/g, " ").slice(0, 300)}`);
+  }
+  L.push("");
+  L.push(`${r.changes.length} change${r.changes.length === 1 ? "" : "s"}. Wrong? Fix the markdown in .continuity/claims/ or`);
+  L.push('`continuity resolve <id> --reject --reason "..."`. Happy? `continuity review --accept`.');
+  return `${L.join("\n")}
+`;
+}
+
 // src/cli.ts
 function fail(msg) {
   console.error(msg);
@@ -4388,6 +4507,21 @@ switch (cmd) {
     if (out.superseded) console.log(`  superseded [${out.superseded}] \u2014 lineage kept, run 'continuity why ${out.id}'`);
     break;
   }
+  case "review": {
+    const s = getStore();
+    const r = review(s);
+    process.stdout.write(renderReview(r, s.list().length));
+    if (bool("accept")) {
+      saveMsg(s, "continuity: state changes pending review");
+      const head = log(s.gitDir, s.gitPath, 1).split(" ")[0];
+      if (!head) fail("No commits touching state yet \u2014 nothing to mark reviewed.");
+      markReviewed(s, head);
+      saveMsg(s, `continuity: reviewed through ${head}`);
+      console.log(`
+Marked reviewed through ${head}.`);
+    }
+    break;
+  }
   case "migrate": {
     const s = getStore();
     const claims = s.list();
@@ -4405,7 +4539,7 @@ switch (cmd) {
   case "capture": {
     const file = flag("file");
     if (!file) fail('Usage: continuity capture --file ops.json   (JSON: {"ops":[...]} \u2014 runs the reconciler)');
-    const parsed = JSON.parse(readFileSync2(file, "utf8"));
+    const parsed = JSON.parse(readFileSync3(file, "utf8"));
     const ops = Array.isArray(parsed) ? parsed : parsed.ops;
     const s = getStore();
     const r = reconcile(s, ops);
@@ -4442,6 +4576,7 @@ switch (cmd) {
   continuity supersede <old> <new> --reason "why"
   continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
+  continuity review [--accept]          (semantic diff of what capture wrote)
   continuity migrate                    (rewrite all claims at the current schema)
   continuity list
   continuity log

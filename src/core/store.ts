@@ -69,6 +69,11 @@ export class Store {
     return this.mode === "repo" ? this.gitDir : `central project "${basename(this.root)}"`;
   }
 
+  /** Path to claims/ relative to gitDir — differs between repo and central mode. */
+  get claimsGitPath(): string {
+    return this.gitPath === "." ? CLAIMS : join(this.gitPath, CLAIMS);
+  }
+
   private claimsDir(): string {
     return join(this.root, CLAIMS);
   }

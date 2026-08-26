@@ -6,6 +6,7 @@ import { ClaimType, Claim, Confidence, SCHEMA_VERSION, SchemaTooNewError, Status
 import { commit, ensureRepo, log as gitLog, revert, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
 import { resolveClaim, ResolveAction } from "./core/resolve.js";
+import { markReviewed, renderReview, review } from "./core/review.js";
 
 function fail(msg: string): never {
   console.error(msg);
@@ -197,6 +198,28 @@ switch (cmd) {
     break;
   }
 
+  case "review": {
+    // The trust ritual for autonomous capture (d4): a SEMANTIC diff of what the
+    // model wrote, not `git log -p` over YAML that nobody reads.
+    const s = getStore();
+    const r = review(s);
+    process.stdout.write(renderReview(r, s.list().length));
+    if (bool("accept")) {
+      // Order matters. Commit any pending claim edits FIRST, then mark that
+      // commit as reviewed, then commit the marker on its own. Marking before
+      // committing would point the marker at a commit that predates the very
+      // changes just approved, and the queue could never converge — the marker
+      // commit itself contains no claims, so the next review compares equal.
+      saveMsg(s, "continuity: state changes pending review");
+      const head = gitLog(s.gitDir, s.gitPath, 1).split(" ")[0];
+      if (!head) fail("No commits touching state yet — nothing to mark reviewed.");
+      markReviewed(s, head);
+      saveMsg(s, `continuity: reviewed through ${head}`);
+      console.log(`\nMarked reviewed through ${head}.`);
+    }
+    break;
+  }
+
   case "migrate": {
     // Rewrites every claim at the current schema. Reading old state never
     // requires this - absent means 1 and migration happens in memory - but it
@@ -259,6 +282,7 @@ switch (cmd) {
   continuity supersede <old> <new> --reason "why"
   continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
+  continuity review [--accept]          (semantic diff of what capture wrote)
   continuity migrate                    (rewrite all claims at the current schema)
   continuity list
   continuity log

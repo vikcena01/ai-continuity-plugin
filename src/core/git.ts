@@ -90,6 +90,35 @@ export function unpushedCount(dir: string, addPath: string): number | null {
   }
 }
 
+/** Files under `path` at a commit. Empty when the ref or path is unknown. */
+export function lsFiles(dir: string, ref: string, path: string): string[] {
+  try {
+    return git(dir, ["ls-tree", "-r", "--name-only", ref, "--", path]).split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** Contents of one file at a commit, or null if it did not exist there. */
+export function showBlob(dir: string, ref: string, file: string): string | null {
+  try {
+    return git(dir, ["show", `${ref}:${file}`]);
+  } catch {
+    return null;
+  }
+}
+
+/** Commits touching `path` between `ref` and HEAD. */
+export function revListSince(dir: string, path: string, ref: string | null): number {
+  if (!ref) return 0;
+  try {
+    const n = Number(git(dir, ["rev-list", "--count", `${ref}..HEAD`, "--", path]).trim());
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function log(dir: string, addPath: string, n = 20): string {
   try {
     return git(dir, ["log", `-n${n}`, "--oneline", "--", addPath]).trimEnd();
