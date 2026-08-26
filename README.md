@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <img src="assets/logo-light.svg" alt="Continuity" width="320">
+    <img src="assets/logo-light.svg" alt="Continuity" width="180">
   </picture>
 </p>
 
@@ -132,9 +132,9 @@ Known limits, tracked as claims in this repo's own `.continuity/`: the Stop-hook
 
 ## The mark
 
-<img src="assets/mark.svg" alt="" width="52" align="left" hspace="14" vspace="4">
+<img src="assets/mark.svg" alt="" width="26" align="left" hspace="12" vspace="2">
 
-A git graph, because that is literally what the state is. The solid vertical line is the append-only timeline of accepted claims; the muted branch is a superseded one — archived off to the side, never deleted, still reachable through `why`. Two colours, one idea: what is current, and what it replaced.
+A **C** drawn as one unbroken arc — the thread that survives between sessions — terminating in a node, a single captured claim. `assets/icon.svg` is the same mark on a rounded tile for an avatar or favicon; `assets/logo-light.svg` and `assets/logo-dark.svg` are the wordmark lockups, picked by `prefers-color-scheme` so both GitHub themes work.
 
 <br clear="left">
 
