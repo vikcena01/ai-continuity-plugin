@@ -113,7 +113,7 @@ Postgres is the primary datastore; a Redis read cache may come later.
 
 ## Status
 
-**v0.1 — deterministic core + CLI + MCP server + Claude Code plugin.** Short ids, fuzzy lookup, git-backed event log, and 69 assertions across four suites (`npm test`).
+**v1.0 — deterministic core + CLI + MCP server + Claude Code plugin.** Short ids, fuzzy lookup, git-backed event log, and 69 assertions across four suites (`npm test`).
 
 Working today:
 

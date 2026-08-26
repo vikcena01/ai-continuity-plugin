@@ -25276,7 +25276,7 @@ function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
 }
 var server = new McpServer(
-  { name: "continuity", version: "0.1.0" },
+  { name: "continuity", version: "1.0.0" },
   {
     instructions: "Continuity maintains durable, versioned project state across sessions. At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open or re-propose them. As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection (capture is autonomous \u2014 no need to ask permission; the user reviews the git history later). Only call freeze_claim when the user explicitly wants something locked as unchangeable. If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason."
   }

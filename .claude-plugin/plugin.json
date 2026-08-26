@@ -1,7 +1,7 @@
 {
   "name": "continuity",
   "displayName": "Continuity",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Portable, git-backed project-state. Resume any session without losing decisions, constraints, or direction.",
   "license": "MIT",
   "author": {
