@@ -4,16 +4,21 @@ type: next_action
 title: >-
   Restart the session, then exercise the public install path — everything else
   for v1.0.0 is done
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T06:46:33.685Z'
 supersedes:
   - n11zg
-superseded_by: null
+superseded_by: n13vu
 depends_on: []
 tags: []
+superseded_reason: >-
+  Submitting is now the active goal, and the SHA-pinning constraint means
+  anything requiring a history change has to happen before submission rather
+  than after — so the ordering of the remaining work matters and the previous
+  next_action did not capture it.
 ---
 
 Shipped state: remote main and remote tag v1.0.0 both at 765fe1d, all 77 commits authored Vikash Singh <vikcena01@gmail.com>, zero continuity@local in history, dist/ verified in sync, 69 assertions green.
