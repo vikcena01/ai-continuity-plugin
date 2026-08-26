@@ -1,19 +1,25 @@
 ---
+schema: 1
 id: n17mv
 type: next_action
 title: >-
   Everything actionable from a terminal is done — poll the catalogue, then
   verify install from a fresh session
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T07:13:03.592Z'
 supersedes:
   - n16u8
-superseded_by: null
+superseded_by: n18yb
 depends_on: []
 tags: []
+superseded_reason: >-
+  Three substantial pieces landed since the previous next_action was written
+  (claim-schema versioning, the sanitisation of published claims, and the
+  history purge with its force-push), so its summary of the state is out of
+  date.
 ---
 
 Verified live 2026-08-26 via api.github.com/repos/vikcena01/ai-continuity-plugin: description set ('Durable project state across AI sessions — decisions, constraints, and rejected paths, versioned in git. Not a memory tool.'), topics ai-agents / claude-code / claude-code-plugin / git / mcp / project-state, licence MIT detected, public, default branch main. Rendered README verified earlier the same day: <picture> with prefers-color-scheme survives GitHub's sanitiser, align=left survives, all four assets serve 200. Attribution live: Contributors 1 — vikcena01 Vikash Singh.
