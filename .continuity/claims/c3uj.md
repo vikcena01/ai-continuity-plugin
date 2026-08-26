@@ -2,15 +2,20 @@
 id: c3uj
 type: constraint
 title: 'Visual work must be verified by rendering it, never by reading the markup'
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T06:10:56.528Z'
 supersedes: []
-superseded_by: null
+superseded_by: c7ia
 depends_on: []
 tags: []
+superseded_reason: >-
+  The original constraint covered locally rendered SVG but not remote-rendered
+  markdown, where the failure mode is inverted: grepping GitHub's page HTML
+  produced a FALSE NEGATIVE that made a working feature look broken, which is
+  the kind of finding that gets a correct README 'fixed'.
 reason: >-
   Every logo failure in this project was invisible in the SVG source and obvious
   within seconds of looking at the render, so reviewing markup gives false
