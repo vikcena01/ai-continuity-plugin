@@ -7,6 +7,15 @@
 
 <p align="center"><em>Resume any AI session without losing your decisions, constraints, or direction.</em></p>
 
+<p align="center">
+  <a href="https://github.com/vikcena01/ai-continuity-plugin/releases"><img alt="version" src="https://img.shields.io/github/v/tag/vikcena01/ai-continuity-plugin?label=version&color=6366F1"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/vikcena01/ai-continuity-plugin?color=6366F1"></a>
+  <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-8B5CF6">
+  <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8B5CF6">
+  <img alt="tests" src="https://img.shields.io/badge/tests-69%20passing-3FB950">
+  <img alt="dependencies" src="https://img.shields.io/badge/dependencies-zero-3FB950">
+</p>
+
 Portable, git-backed **project-state** for long-running AI work — in Claude Code, Cursor, or anything that speaks MCP.
 
 It is **not a memory tool.** A memory tool answers *"what did we talk about?"* Continuity answers a different question: *"what is true about this project **now**, and what must not be touched?"*
