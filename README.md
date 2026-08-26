@@ -129,9 +129,46 @@ tags: []
 Postgres is the primary datastore; a Redis read cache may come later.
 ```
 
+## The claim format (a contract)
+
+Once anyone else's repo holds claims, the file format is a contract — so it carries a version:
+
+```yaml
+---
+schema: 1              # absent means 1
+id: d16k3              # <type prefix><n><2-char suffix>; the suffix keeps concurrent clones from colliding
+type: decision         # mission requirement decision constraint architecture milestone
+                       # hypothesis experiment risk question next_action rejected_alternative
+title: One crisp fact
+status: accepted       # accepted active frozen open superseded invalidated rejected
+                       # needs_review completed done resolved
+confidence: confirmed  # unverified tentative confirmed
+provenance: { origin: auto, created: ... }
+supersedes: []
+superseded_by: null
+superseded_reason: ""  # why the replacement happened — travels with the claim
+resolution: ""         # why it was closed, set by `continuity resolve`
+---
+
+Prose body. The reason, the context, whatever a future session needs.
+```
+
+**Stability promise.** A claim written by an older Continuity always reads: absent `schema` means 1, and older shapes migrate forward in memory without rewriting your files. A claim written by a *newer* Continuity is **refused by name**, loudly, rather than half-parsed — guessing at a shape we do not understand is how state degrades silently. `continuity migrate` rewrites files at the current schema when you want the version explicit on disk.
+
+## Reviewing what was captured
+
+Capture is autonomous, so the safeguard is that you can see what it wrote:
+
+```bash
+continuity review            # semantic diff: what appeared, changed status, or was edited — and why
+continuity review --accept   # mark it reviewed
+```
+
+It catches hand edits as well as tool writes, and the resume context tells you when changes are waiting.
+
 ## Status
 
-**v1.0 — deterministic core + CLI + MCP server + Claude Code plugin.** Short ids, fuzzy lookup, git-backed event log, and 69 assertions across four suites (`npm test`).
+**v1.0 — deterministic core + CLI + MCP server + Claude Code plugin.** Versioned claim files, collision-safe ids, fuzzy lookup, a budgeted resume projection, git-backed event log, and 124 assertions across seven suites (`npm test`).
 
 Working today:
 
