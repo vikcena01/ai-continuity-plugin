@@ -4,15 +4,20 @@ type: decision
 title: >-
   The logo is a git graph encoding the data model, shipped as in-repo SVG with a
   light/dark pair
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T05:56:44.731Z'
 supersedes: []
-superseded_by: null
+superseded_by: d26xq
 depends_on: []
 tags: []
+superseded_reason: >-
+  The git-graph mark it replaces was semantically neat but looked like a diagram
+  rather than a brand mark, and the user rejected it as not nice-looking. A
+  monogram is the product's own letter, so it cannot be confused with a generic
+  symbol, and it survives being scaled down.
 reason: >-
   The mark should say what the project is rather than decorate it, and the state
   model already has a natural visual: a timeline with branches. Keeping the
