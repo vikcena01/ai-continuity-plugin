@@ -5,16 +5,20 @@ type: next_action
 title: >-
   Claude submission stands and is waiting on review; OpenAI is closed — verify
   install from a fresh session
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T09:41:06.343Z'
 supersedes:
   - n19j9
-superseded_by: null
+superseded_by: n21lz
 depends_on: []
 tags: []
+superseded_reason: >-
+  The previous direction still listed CI and the claim-format docs as
+  outstanding; both shipped, so it would have sent a future session to redo
+  finished work.
 ---
 
 RESOLVED 2026-08-26: the 'verified developer identity' prompt was OpenAI's. The Claude community submission was never affected — treat it as in review and simply wait. Do not resubmit.
