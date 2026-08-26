@@ -3,8 +3,23 @@ name: ci
 on:
   push:
     branches: [main]
+    # Claim files are state, not code: they cannot break the build, and autonomous
+    # capture commits them often. Skipping them keeps CI signal about code changes.
+    paths-ignore:
+      - '.continuity/**'
   pull_request:
   workflow_dispatch:
+
+# Least privilege: the job only reads the repo. Without this the default
+# GITHUB_TOKEN scope is broader than anything here needs, which matters more than
+# usual for a repo whose whole purpose is other people installing its code.
+permissions:
+  contents: read
+
+# Rapid pushes are normal here, so supersede rather than queue.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
