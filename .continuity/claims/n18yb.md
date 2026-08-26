@@ -5,16 +5,21 @@ type: next_action
 title: >-
   Waiting on Claude community review — nothing else is outstanding that a
   terminal can do
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T08:27:55.012Z'
 supersedes:
   - n17mv
-superseded_by: null
+superseded_by: n19j9
 depends_on: []
 tags: []
+superseded_reason: >-
+  The previous next_action asserted the submission was in review. That is now in
+  doubt: the user hit a 'You need a verified developer identity before you can
+  create or upload a plugin' gate, and if that appeared on Anthropic's platform
+  rather than OpenAI's, the submission never started and waiting is wasted time.
 ---
 
 Shipped since: per-claim schema versioning with loud refusal of a newer format and a `continuity migrate` command (rk10gu); personal infrastructure and third-party names removed from published claims (c8ea now forbids putting them there); history purged and force-pushed. Remote main and tag v1.0.0 both at abb6230. 85 assertions across five suites. dist/ verified in sync.
