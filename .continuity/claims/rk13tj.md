@@ -5,11 +5,12 @@ type: risk
 title: >-
   The write path is the weak half — capture is too eager, and its errors were
   caught only incidentally
-status: open
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T09:43:48.492Z'
+  updated: '2026-08-26T14:59:45.119Z'
 supersedes: []
 superseded_by: null
 depends_on: []
@@ -18,6 +19,12 @@ reason: >-
   d9 makes the READ path trustworthy by construction, but nothing equivalent
   protects the writes, and the stated guardrail (the human reads the git diff)
   was not what actually caught the errors today.
+resolution: >-
+  Fixed across 69d8f55 and 96eeff7: 'continuity review' gives a semantic diff of
+  what capture wrote (NEW/STATUS/REPLACED/EDITED, each with its reason), the
+  resume context reports unreviewed changes so the ritual is prompted rather
+  than remembered, and the Stop hook plus MCP instructions now default to
+  capturing NOTHING. 21 assertions in test/review.sh.
 ---
 
 Two separate problems, both measured on 2026-08-26.
