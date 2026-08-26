@@ -1,14 +1,16 @@
 ---
+schema: 1
 id: rk10gu
 type: risk
 title: >-
   The claim file format becomes an unversioned public schema the moment users
   have .continuity/ directories
-status: open
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T07:26:46.986Z'
+  updated: '2026-08-26T07:34:37.808Z'
 supersedes: []
 superseded_by: null
 depends_on: []
@@ -17,6 +19,19 @@ reason: >-
   It gets strictly more expensive to retrofit with every user who accumulates
   state, and this project has already changed the format twice in one week — so
   the cost is demonstrated, not hypothetical.
+resolution: >-
+  Built and pushed: a per-claim schema field (SCHEMA_VERSION = 1, absent means 1
+  so all pre-versioning claims read unchanged), a migrate() hook that upgrades
+  older shapes in memory rather than rewriting files, and — the point of the
+  exercise — a claim from a NEWER build is now REFUSED by filename with an
+  actionable message instead of being half-parsed into quiet degradation. Plus a
+  'continuity migrate' command to make the version explicit on disk. Per-claim
+  rather than a single VERSION file so each file self-describes and clones on
+  different versions still merge cleanly, the same reasoning that fixed rk2.
+  Covered by test/schema.sh, now part of npm test. NOT yet done: the format
+  contract is not documented in the README, and one assertion in the new suite
+  is flaky (the behaviour it checks works when run directly) — both worth
+  closing before the format is bumped for real.
 ---
 
 Claim frontmatter (id, type, status, confidence, provenance, supersedes, superseded_by, depends_on, resolution, conflicts_with) and the id shape are a de-facto contract as soon as anyone else's repo holds claims. There is currently NO version field on a claim and NO migration path.
