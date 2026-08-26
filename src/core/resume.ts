@@ -64,6 +64,10 @@ export function renderResumeContext(claims: Claim[], meta: ResumeMeta = {}): str
   const parked = claims.filter((c) => c.status === "needs_review");
   if (parked.length) {
     L.push("## ⚠️ CONFLICTS NEEDING ATTENTION (parked by the reconciler — resolve, don't act blindly)");
+    L.push(
+      "_Close each with the `resolve_claim` tool (or `continuity resolve <id> --accept|--reject --reason \"...\"`): " +
+        'accept makes the new claim win, reject turns it into a guardrail. Accepting over a FROZEN claim needs an explicit unfreeze._',
+    );
     for (const c of parked) {
       const against = c.conflicts_with ? claims.find((x) => x.id === c.conflicts_with) : undefined;
       const vs = against ? `[${against.id}] "${against.title}" (${against.status})` : "an existing claim";
@@ -103,14 +107,18 @@ export function renderResumeContext(claims: Claim[], meta: ResumeMeta = {}): str
     L.push("");
   }
 
+  // Any claim rejected via the resolve verb becomes a guardrail, whatever its type —
+  // a constraint rejected after being parked must not come back either. Map keyed by
+  // id so a rejected_alternative is not listed twice.
   const rejected = [
-    ...by(claims, ["rejected_alternative"]),
-    ...by(claims, ["hypothesis"], new Set(["rejected"])),
+    ...new Map(
+      claims.filter((c) => c.type === "rejected_alternative" || c.status === "rejected").map((c) => [c.id, c]),
+    ).values(),
   ];
   if (rejected.length) {
     L.push("## 🚫 Do NOT revisit (already rejected — do not re-propose)");
     for (const c of rejected) {
-      L.push(`- [${c.id}] ${c.title} — REJECTED because: ${c.reason ?? c.body}`);
+      L.push(`- [${c.id}] ${c.title} — REJECTED because: ${c.reason ?? c.resolution ?? c.body}`);
     }
     L.push("");
   }

@@ -115,6 +115,8 @@ export interface Claim {
   reason?: string;
   /** Set when the reconciler parked this claim: the claim it clashes with (e.g. a frozen one). */
   conflicts_with?: string;
+  /** Why this claim was closed (resolved/done/rejected via the resolve verb). */
+  resolution?: string;
   tags: string[];
 }
 
@@ -134,6 +136,7 @@ export function parseClaim(raw: string): Claim {
     depends_on: data.depends_on ?? [],
     reason: data.reason,
     conflicts_with: data.conflicts_with,
+    resolution: data.resolution,
     tags: data.tags ?? [],
   };
 }
@@ -154,6 +157,7 @@ export function serializeClaim(c: Claim): string {
   if (c.superseded_reason) fm.superseded_reason = c.superseded_reason;
   if (c.reason) fm.reason = c.reason;
   if (c.conflicts_with) fm.conflicts_with = c.conflicts_with;
+  if (c.resolution) fm.resolution = c.resolution;
   // js-yaml (via gray-matter) throws on `undefined`; drop undefined keys.
   const clean = JSON.parse(JSON.stringify(fm));
   return matter.stringify(`\n${c.body}\n`, clean);

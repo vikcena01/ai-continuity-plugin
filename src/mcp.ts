@@ -5,6 +5,7 @@ import { Store } from "./core/store.js";
 import { renderResumeContext } from "./core/resume.js";
 import { commit, ensureRepo, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
+import { resolveClaim } from "./core/resolve.js";
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
 
@@ -40,7 +41,8 @@ const server = new McpServer(
       "treat FROZEN items and rejected alternatives as authoritative — do not re-open or re-propose them. " +
       "As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection " +
       "(capture is autonomous — no need to ask permission; the user reviews the git history later). " +
-      "Only call freeze_claim when the user explicitly wants something locked as unchangeable.",
+      "Only call freeze_claim when the user explicitly wants something locked as unchangeable. " +
+      "If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason.",
   },
 );
 
@@ -172,6 +174,35 @@ server.tool(
 );
 
 server.tool(
+  "resolve_claim",
+  "Close a claim, recording WHY. Two uses: (1) a claim parked as needs_review by the reconciler — action 'accept' makes it win (superseding whatever it conflicted with) or 'reject' turns it into a guardrail so it is never re-proposed; (2) an open risk/question/next_action that has been dealt with — action 'close'. Accepting over a FROZEN claim additionally requires unfreeze=true, because breaking a frozen invariant is a deliberate human act: ask the user first.",
+  {
+    ...projectArg,
+    claim: z.string().describe("Claim id, or a title substring."),
+    action: z
+      .enum(["accept", "reject", "close"])
+      .optional()
+      .describe("Parked claims must say accept or reject; live claims default to close."),
+    reason: z.string().describe("Why it is being closed. Required — this is what a future session reads."),
+    unfreeze: z
+      .boolean()
+      .optional()
+      .describe("Only to accept a claim parked against a FROZEN one. Requires the user's explicit go-ahead."),
+  },
+  async ({ project, claim, action, reason, unfreeze }) => {
+    const s = resolveStore(project);
+    try {
+      const r = resolveClaim(s, { query: claim, action, reason, unfreeze });
+      save(s, `continuity: resolve ${r.id} ${r.from} -> ${r.to} (${r.action})`);
+      const extra = r.superseded ? ` — superseded [${r.superseded}], lineage kept` : "";
+      return text(`[${r.id}] ${r.from} -> ${r.to}${extra}`);
+    } catch (e) {
+      return text(e instanceof Error ? e.message : String(e));
+    }
+  },
+);
+
+server.tool(
   "why",
   "Explain what a claim replaced and why (supersession lineage). Accepts an id or a title substring.",
   { ...projectArg, id: z.string() },
@@ -184,6 +215,7 @@ server.tool(
     const lines = [`CURRENT: [${cur.id}] ${cur.title} (status: ${cur.status})`];
     if (!replaced.length) lines.push("  (supersedes nothing — original decision)");
     for (const r of replaced) lines.push(`  ↑ replaced [${r.id}] ${r.title} — because: ${r.superseded_reason ?? ""}`);
+    if (cur.resolution) lines.push(`  resolved: ${cur.resolution}`);
     return text(lines.join("\n"));
   },
 );

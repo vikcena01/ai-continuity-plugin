@@ -5,6 +5,7 @@ import { renderResumeContext } from "./core/resume.js";
 import { ClaimType, Claim, Confidence, Status } from "./core/claim.js";
 import { commit, ensureRepo, log as gitLog, revert, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
+import { resolveClaim, ResolveAction } from "./core/resolve.js";
 
 function fail(msg: string): never {
   console.error(msg);
@@ -12,6 +13,13 @@ function fail(msg: string): never {
 }
 
 const [cmd, ...rest] = process.argv.slice(2);
+
+/** Flags that take no value — positionals() must not swallow the next argument. */
+const BOOLEAN_FLAGS = new Set(["accept", "reject", "close", "unfreeze"]);
+
+function bool(name: string): boolean {
+  return rest.includes(`--${name}`);
+}
 
 function flag(name: string): string | undefined {
   const i = rest.indexOf(`--${name}`);
@@ -22,7 +30,7 @@ function positionals(): string[] {
   const out: string[] = [];
   for (let i = 0; i < rest.length; i++) {
     if (rest[i].startsWith("--")) {
-      i++; // skip flag value
+      if (!BOOLEAN_FLAGS.has(rest[i].slice(2))) i++; // skip flag value
       continue;
     }
     out.push(rest[i]);
@@ -154,6 +162,33 @@ switch (cmd) {
       console.log(`  ↑ replaced [${r.id}] ${r.title}`);
       console.log(`      because: ${r.superseded_reason ?? ""}`);
     }
+    if (cur.resolution) console.log(`  resolved: ${cur.resolution}`);
+    break;
+  }
+
+  case "resolve": {
+    const q = positionals()[0];
+    const reason = flag("reason");
+    if (!q || !reason) {
+      fail('Usage: continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]');
+    }
+    const action: ResolveAction | undefined = bool("accept")
+      ? "accept"
+      : bool("reject")
+        ? "reject"
+        : bool("close")
+          ? "close"
+          : undefined;
+    const s = getStore();
+    let out;
+    try {
+      out = resolveClaim(s, { query: q, action, reason, unfreeze: bool("unfreeze") });
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e));
+    }
+    saveMsg(s, `continuity: resolve ${out.id} ${out.from} -> ${out.to} (${out.action})`);
+    console.log(`[${out.id}] ${out.from} -> ${out.to}`);
+    if (out.superseded) console.log(`  superseded [${out.superseded}] — lineage kept, run 'continuity why ${out.id}'`);
     break;
   }
 
@@ -205,6 +240,7 @@ switch (cmd) {
   continuity capture --file ops.json    (batch capture through the reconciler)
   continuity freeze <id-or-text>
   continuity supersede <old> <new> --reason "why"
+  continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
   continuity list
   continuity log

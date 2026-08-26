@@ -3558,6 +3558,7 @@ function parseClaim(raw) {
     depends_on: data.depends_on ?? [],
     reason: data.reason,
     conflicts_with: data.conflicts_with,
+    resolution: data.resolution,
     tags: data.tags ?? []
   };
 }
@@ -3577,6 +3578,7 @@ function serializeClaim(c) {
   if (c.superseded_reason) fm.superseded_reason = c.superseded_reason;
   if (c.reason) fm.reason = c.reason;
   if (c.conflicts_with) fm.conflicts_with = c.conflicts_with;
+  if (c.resolution) fm.resolution = c.resolution;
   const clean = JSON.parse(JSON.stringify(fm));
   return import_gray_matter.default.stringify(`
 ${c.body}
@@ -3846,6 +3848,9 @@ function renderResumeContext(claims2, meta = {}) {
   const parked = claims2.filter((c) => c.status === "needs_review");
   if (parked.length) {
     L.push("## \u26A0\uFE0F CONFLICTS NEEDING ATTENTION (parked by the reconciler \u2014 resolve, don't act blindly)");
+    L.push(
+      '_Close each with the `resolve_claim` tool (or `continuity resolve <id> --accept|--reject --reason "..."`): accept makes the new claim win, reject turns it into a guardrail. Accepting over a FROZEN claim needs an explicit unfreeze._'
+    );
     for (const c of parked) {
       const against = c.conflicts_with ? claims2.find((x) => x.id === c.conflicts_with) : void 0;
       const vs = against ? `[${against.id}] "${against.title}" (${against.status})` : "an existing claim";
@@ -3882,13 +3887,14 @@ function renderResumeContext(claims2, meta = {}) {
     L.push("");
   }
   const rejected = [
-    ...by(claims2, ["rejected_alternative"]),
-    ...by(claims2, ["hypothesis"], /* @__PURE__ */ new Set(["rejected"]))
+    ...new Map(
+      claims2.filter((c) => c.type === "rejected_alternative" || c.status === "rejected").map((c) => [c.id, c])
+    ).values()
   ];
   if (rejected.length) {
     L.push("## \u{1F6AB} Do NOT revisit (already rejected \u2014 do not re-propose)");
     for (const c of rejected) {
-      L.push(`- [${c.id}] ${c.title} \u2014 REJECTED because: ${c.reason ?? c.body}`);
+      L.push(`- [${c.id}] ${c.title} \u2014 REJECTED because: ${c.reason ?? c.resolution ?? c.body}`);
     }
     L.push("");
   }
