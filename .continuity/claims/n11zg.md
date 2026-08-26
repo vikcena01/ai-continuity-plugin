@@ -4,16 +4,20 @@ type: next_action
 title: >-
   Awaiting go-ahead on one combined force-push: fix attribution, re-tag v1.0.0,
   then verify the install path
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T06:25:10.063Z'
 supersedes:
   - n10ra
-superseded_by: null
+superseded_by: n12gs
 depends_on: []
 tags: []
+superseded_reason: >-
+  The combined force-push it was waiting on is complete: authors rewritten,
+  git.ts fixed, SHA references remapped, v1.0.0 re-tagged at main, all pushed
+  and verified. Only outside-this-session confirmation remains.
 ---
 
 Proposed, NOT yet approved — do not force-push without a fresh go-ahead:
