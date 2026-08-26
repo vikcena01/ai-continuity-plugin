@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { Claim, ClaimType, Confidence, Provenance, Status, parseClaim, serializeClaim } from "./claim.js";
+import { Claim, ClaimType, Confidence, Provenance, Status, defaultStatusFor, parseClaim, serializeClaim } from "./claim.js";
 import { isRepo } from "./git.js";
 
 const STATE_DIR = ".continuity"; // repo-mode state dir
@@ -188,7 +188,7 @@ export class Store {
       type: input.type,
       title: input.title,
       body: input.body ?? "",
-      status: input.status ?? "accepted",
+      status: input.status ?? defaultStatusFor(input.type),
       confidence: input.confidence ?? "tentative",
       provenance: { origin: input.origin ?? "manual", session: input.session, created: new Date().toISOString() },
       supersedes: [],

@@ -4,7 +4,7 @@ type: risk
 title: >-
   Concurrent capture across clones produces duplicate claim ids — git merges
   them silently
-status: accepted
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
@@ -19,4 +19,20 @@ reason: >-
   warn anyone.
 ---
 
-nextId (src/core/store.ts:205) allocates the next free id by scanning only the LOCAL claims directory. Two people each recording a decision on their own clone both get d16; the files are separate paths, so git merges both without a textual conflict and the state ends up with two d16.md-style claims under one id. `why d16` then becomes ambiguous and resume renders both. File-per-claim is otherwise a strong merge design — independent claims never textually conflict — so id allocation is the single place that assumes a single writer. Candidate fixes: content-hash or timestamp-based id suffixes, or a per-author prefix; either way ids must stay short and typeable (the stated reason for the scheme in store.ts:9).
+CORRECTED 2026-08-26 — the original text of this claim said git "merges them silently"
+into duplicate ids. That is wrong, and the correction matters because it changes the
+severity: both developers write the SAME path, .continuity/claims/d16.md, so git raises
+an add/add merge CONFLICT. Verified by driving two real clones through a concurrent
+capture. The damage was never silent duplication; it was (a) a merge conflict in a file
+neither developer consciously wrote, on every concurrent capture, and (b) the natural
+resolution — keep one side — silently discarding the other developer's claim, which
+violates the append-only guarantee in d1.
+
+nextId (src/core/store.ts) allocated ids by scanning only the LOCAL claims directory,
+so two people each recording the Nth decision both landed on dN.
+
+FIXED in 0dd389b: ids are now `<prefix><n><2-char suffix>`, e.g. d16k3. The sequence
+number keeps them readable and ordered; the suffix is letter-first so it can never be
+absorbed by the `^prefix(\d+)` parse. Two concurrent writers get d16k3 and d16m9 — two
+files, clean merge, both claims preserved. Collision now needs the same sequence number
+AND the same 2 of 936 suffixes. Covered by test/risks.sh, which merges two real clones.

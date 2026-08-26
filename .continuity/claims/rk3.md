@@ -4,7 +4,7 @@ type: risk
 title: >-
   git clone carries the state but does not activate it — no tracked
   .claude/settings.json registers the hooks
-status: accepted
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
@@ -20,3 +20,5 @@ reason: >-
 ---
 
 Verified 2026-08-25 with a real clone into a temp dir: .continuity/claims/*.md is fully tracked (31 files) and `node dist/cli.js resume` renders the complete context with NO node_modules present, confirming d13's zero-install claim. But the only file under .claude/ is settings.local.json, which is untracked (and holds stale POC permissions). Nothing in the repo registers the SessionStart hook, the Stop hook, or the MCP server, so a collaborator who clones gets no auto-resume and no auto-capture until they separately run the /plugin install steps — the state sits unread. Fix is small: commit a .claude/settings.json wiring the hooks so the repo self-activates on clone.
+
+FIXED in 0dd389b: .claude/settings.json registers both hooks against the repo's own committed bundles via $CLAUDE_PROJECT_DIR, so a plain clone self-activates. Both hooks de-duplicate per session (src/core/once.ts) so a developer who also has the plugin installed is not double-fired.

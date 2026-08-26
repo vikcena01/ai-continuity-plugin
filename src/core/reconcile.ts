@@ -108,7 +108,6 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         title: op.title,
         body: op.body,
         reason: op.reason,
-        status: op.op === "reject" ? "rejected" : "accepted",
         confidence: op.confidence ?? "tentative",
         origin: "auto",
       });
@@ -144,7 +143,6 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         type,
         title: op.title,
         body: op.body,
-        status: "accepted",
         confidence: op.confidence ?? "confirmed",
         origin: "auto",
       });

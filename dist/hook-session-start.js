@@ -3527,6 +3527,21 @@ import { basename, dirname, join } from "node:path";
 
 // src/core/claim.ts
 var import_gray_matter = __toESM(require_gray_matter(), 1);
+function defaultStatusFor(type) {
+  switch (type) {
+    case "question":
+    case "risk":
+    case "milestone":
+    case "next_action":
+      return "open";
+    case "rejected_alternative":
+      return "rejected";
+    case "mission":
+      return "active";
+    default:
+      return "accepted";
+  }
+}
 function parseClaim(raw) {
   const { data, content } = (0, import_gray_matter.default)(raw);
   return {
@@ -3723,7 +3738,7 @@ var Store = class _Store {
       type: input2.type,
       title: input2.title,
       body: input2.body ?? "",
-      status: input2.status ?? "accepted",
+      status: input2.status ?? defaultStatusFor(input2.type),
       confidence: input2.confidence ?? "tentative",
       provenance: { origin: input2.origin ?? "manual", session: input2.session, created: (/* @__PURE__ */ new Date()).toISOString() },
       supersedes: [],

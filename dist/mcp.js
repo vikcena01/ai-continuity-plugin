@@ -24681,6 +24681,21 @@ function normalizeType(input) {
   if (CLAIM_TYPES.includes(k)) return k;
   return TYPE_ALIASES[k] ?? null;
 }
+function defaultStatusFor(type) {
+  switch (type) {
+    case "question":
+    case "risk":
+    case "milestone":
+    case "next_action":
+      return "open";
+    case "rejected_alternative":
+      return "rejected";
+    case "mission":
+      return "active";
+    default:
+      return "accepted";
+  }
+}
 function parseClaim(raw) {
   const { data, content } = (0, import_gray_matter.default)(raw);
   return {
@@ -24908,7 +24923,7 @@ var Store = class _Store {
       type: input.type,
       title: input.title,
       body: input.body ?? "",
-      status: input.status ?? "accepted",
+      status: input.status ?? defaultStatusFor(input.type),
       confidence: input.confidence ?? "tentative",
       provenance: { origin: input.origin ?? "manual", session: input.session, created: (/* @__PURE__ */ new Date()).toISOString() },
       supersedes: [],
@@ -25126,7 +25141,6 @@ function reconcile(store, ops) {
         title: op.title,
         body: op.body,
         reason: op.reason,
-        status: op.op === "reject" ? "rejected" : "accepted",
         confidence: op.confidence ?? "tentative",
         origin: "auto"
       });
@@ -25159,7 +25173,6 @@ function reconcile(store, ops) {
         type,
         title: op.title,
         body: op.body,
-        status: "accepted",
         confidence: op.confidence ?? "confirmed",
         origin: "auto"
       });

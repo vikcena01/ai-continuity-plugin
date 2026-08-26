@@ -63,6 +63,32 @@ export type Status =
   | "done"
   | "resolved";
 
+/**
+ * The status a claim starts in, decided by its type.
+ *
+ * This lives here because two write paths disagreed: record_open hardcoded
+ * "open" while capture hardcoded "accepted", so a risk or question recorded by
+ * AUTONOMOUS capture came out "accepted" — and renderResumeContext only surfaces
+ * question/risk when they are "open". Every autonomously captured risk was
+ * therefore silently absent from the resume context, which is precisely the
+ * state a future session most needs to see.
+ */
+export function defaultStatusFor(type: ClaimType): Status {
+  switch (type) {
+    case "question":
+    case "risk":
+    case "milestone":
+    case "next_action":
+      return "open";
+    case "rejected_alternative":
+      return "rejected";
+    case "mission":
+      return "active";
+    default:
+      return "accepted";
+  }
+}
+
 export type Confidence = "unverified" | "tentative" | "confirmed";
 
 export interface Provenance {

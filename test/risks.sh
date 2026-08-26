@@ -24,11 +24,28 @@ out="$(C capture --file "$TMP/ops.json" --project rk)"
 ids="$(C list --project rk)"
 
 ok "rk1 alias open_question -> question"  'echo "$ids" | grep -qE " q1[a-z][a-z0-9] +Is the alias path wired"'
-ok "rk1 no fallback prefix minted"        '! echo "$ids" | grep -q " ope"'
+ok "rk1 no fallback prefix minted"        '! echo "$ids" | grep -qE " ope[0-9]"'
 ok "rk1 unknown type is rejected"         '! echo "$ids" | grep -q "Should never be recorded"'
 ok "rk1 rejection is explained in notes"  'echo "$out" | grep -q "unknown type" && echo "$out" | grep -q banana'
 ok "rk1 valid types listed in the note"   'echo "$out" | grep -q "rejected_alternative"'
 ok "rk1 good ops still applied"           'echo "$ids" | grep -q "A plain decision"'
+
+# ---- rk6: autonomously captured risks/questions must reach the resume ---------
+# capture used to force status "accepted", but resume only surfaces question/risk
+# when they are "open" — so every captured risk was silently invisible.
+cat > "$TMP/ops2.json" <<'JSON'
+{"ops":[
+  {"op":"add","type":"risk","title":"A captured risk must be visible"},
+  {"op":"add","type":"question","title":"A captured question must be visible"},
+  {"op":"add","type":"decision","title":"A captured decision stays accepted"}
+]}
+JSON
+C capture --file "$TMP/ops2.json" --project rk >/dev/null
+r2="$(C resume --project rk)"
+ok "rk6 captured risk reaches resume"     'echo "$r2" | grep -q "A captured risk must be visible"'
+ok "rk6 captured question reaches resume" 'echo "$r2" | grep -q "A captured question must be visible"'
+ok "rk6 they land under open questions"   'echo "$r2" | sed -n "/Open questions/,\$p" | grep -q "A captured risk must be visible"'
+ok "rk6 decisions still land accepted"    'C list --project rk | grep -qE "accepted\].*A captured decision stays accepted"'
 
 # ---- rk2: concurrent capture on two clones must not collide -----------------
 git init -q --bare "$TMP/origin.git"
