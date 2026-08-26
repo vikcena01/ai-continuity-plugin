@@ -4,11 +4,12 @@ type: risk
 title: >-
   The community catalogue is crowded with memory tools — a description that
   reads as 'persistent memory' makes this indistinguishable
-status: open
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T07:01:16.080Z'
+  updated: '2026-08-26T07:05:03.573Z'
 supersedes: []
 superseded_by: null
 depends_on: []
@@ -18,6 +19,15 @@ reason: >-
   memory, continuity, or state. Discovery is by name and first line, so
   positioning is the difference between being found and being lost in that
   group.
+resolution: >-
+  Mitigated in c11e818: the marketplace.json description now opens on 'Not a
+  memory tool' and leads with the deterministic read path (d9), the reconciler
+  parking conflicts rather than applying them (d14), and supersessions carrying
+  their reason (d10) — instead of describing what it stores, which is what the
+  other 431 entries also say. The specific condition this risk named (a
+  description reading as persistent memory) no longer holds. Whether that
+  actually converts to discovery is unmeasurable from here, so closing on the
+  mitigation rather than on the outcome.
 ---
 
 Direct neighbours include session-continuity, claude-self-reflect, agent-memory, agent-recall, nexo-brain, substrate, handoffkit, three-pillars and product-discovery. Most are memory or recall tools.
