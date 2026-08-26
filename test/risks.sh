@@ -48,11 +48,16 @@ ok "rk6 they land under open questions"   'echo "$r2" | sed -n "/Open questions/
 ok "rk6 decisions still land accepted"    'C list --project rk | grep -qE "accepted\].*A captured decision stays accepted"'
 
 # ---- rk2: concurrent capture on two clones must not collide -----------------
-git init -q --bare "$TMP/origin.git"
+# -b main on the BARE repo matters: without it the bare repo's HEAD follows the
+# machine's init.defaultBranch, so pushing HEAD:main leaves origin/HEAD pointing at
+# an unborn branch and the second clone comes up empty. Passes on a machine that
+# defaults to main, fails on one that defaults to master.
+git init -q --bare -b main "$TMP/origin.git"
 git -c init.defaultBranch=main clone -q "$TMP/origin.git" "$TMP/A"
 # init already commits .continuity/ itself — no manual seed commit needed.
 ( cd "$TMP/A" && node "$ROOT/dist/cli.js" init "Shared project" && git push -q -u origin HEAD:main ) >/dev/null 2>&1
 git clone -q "$TMP/origin.git" "$TMP/B" >/dev/null 2>&1
+ok "rk2 fixture: B received A's seed" 'test -d "$TMP/B/.continuity/claims"'
 
 # A and B each record their own decision without seeing the other's.
 ( cd "$TMP/A" && node "$ROOT/dist/cli.js" record-decision "A picks Redis" >/dev/null && git push -q origin HEAD:main ) >/dev/null 2>&1
@@ -85,8 +90,11 @@ ok "rk5 repo mode stays quiet about sync"          '( cd "$TMP/A" && ! node "$RO
 ok "rk3 project hooks are committed"     'test -f "$ROOT/.claude/settings.json"'
 ok "rk3 hooks run the committed bundles" 'grep -q "CLAUDE_PROJECT_DIR/dist/hook-session-start.js" "$ROOT/.claude/settings.json" && grep -q "CLAUDE_PROJECT_DIR/dist/hook-stop-capture.js" "$ROOT/.claude/settings.json"'
 ok "rk3 those bundles exist to be run"   'test -f "$ROOT/dist/hook-session-start.js" && test -f "$ROOT/dist/hook-stop-capture.js"'
-ok "rk3 session-start dedupes a double registration" \
-   '[[ $(echo "{\"session_id\":\"dup-test\"}" | (cd "$ROOT" && node dist/hook-session-start.js; echo "{\"session_id\":\"dup-test\"}" | node dist/hook-session-start.js) | grep -c "RESUME CONTEXT") -eq 1 ]]'
+# Unique per run: the throttle marker is keyed by session id and lives in tmpdir,
+# so a fixed id makes two suite runs inside the 5s window throttle each other.
+SID="dup-$$-$RANDOM"
+dup="$( (cd "$ROOT" && echo "{\"session_id\":\"$SID\"}" | node dist/hook-session-start.js; echo "{\"session_id\":\"$SID\"}" | node dist/hook-session-start.js) | grep -c "RESUME CONTEXT" )"
+ok "rk3 session-start dedupes a double registration" '[[ "$dup" -eq 1 ]]'
 
 echo ""
 echo "risks: $pass passed, $fail failed"
