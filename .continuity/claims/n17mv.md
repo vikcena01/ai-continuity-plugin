@@ -22,6 +22,6 @@ Nothing further can be done from a terminal session. Remaining, all requiring so
   1. WAIT on review, then poll: curl -s https://raw.githubusercontent.com/anthropics/claude-plugins-community/main/.claude-plugin/marketplace.json | grep -c '"name": "continuity"' — 0 now, 1 once live. No SLA is published; the catalogue syncs nightly, so allow a day after approval.
   2. FRESH SESSION: exercise the public install path, removing the directory-source marketplace first because the name collides (a2qj). Also the first chance to confirm resolve_claim is exposed — the server in the session that built it runs a pre-fix bundle.
   3. COWORK APP: answer q8w6 by installing there rather than reasoning about it.
-  4. Optional, the user's own file: a `Host github.com` block in ~/.ssh/config pinning the personal-account key, so the an unrelated private repo deploy key stops winning by default (d29ka).
+  4. Optional, the user's own file: a `Host github.com` block in ~/.ssh/config pinning the right key, so the wrong one stops winning by default (d29ka).
 
 New commits stay safe; only rewriting history breaks the SHA pin (c6vg).

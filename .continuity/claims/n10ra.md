@@ -24,4 +24,4 @@ superseded_reason: >-
 1. From a FRESH Claude Code session (this one's MCP server still runs a pre-fix bundle): `/plugin marketplace add vikcena01/ai-continuity-plugin` then `/plugin install continuity@continuity-marketplace`, and confirm auto-resume fires and resolve_claim appears as a tool.
 2. Eyeball the GitHub-rendered README: the <picture> light/dark switch and the align=left float around the mark only reveal themselves once rendered.
 3. Decide the commit-attribution question — leave v1.0.0 authorless or rewrite again.
-4. Optional, user's own file: add a `Host github.com` block to ~/.ssh/config pinning the personal-account key, so the an unrelated private repo deploy key stops winning by default across all repos.
+4. Optional, user's own file: add a `Host github.com` block to ~/.ssh/config pinning the right key, so the wrong one stops winning by default.

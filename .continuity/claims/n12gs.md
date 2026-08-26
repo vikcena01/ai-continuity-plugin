@@ -27,5 +27,5 @@ Remaining:
   1. Start a FRESH session — the MCP server in the session that did this work still runs a pre-fix bundle, so resolve_claim is not exposed and captures there produced ids without collision-safe suffixes.
   2. Exercise the public install path, remembering the marketplace-name collision: remove the directory-source marketplace before adding the GitHub one.
   3. Look at the GitHub-rendered README — the <picture> light/dark switch and the align=left float around the mark only reveal themselves once rendered.
-  4. Optional, the user's own file: add a `Host github.com` block to ~/.ssh/config pinning the personal-account key, so the an unrelated private repo deploy key stops winning by default (see d29ka).
+  4. Optional, the user's own file: add a `Host github.com` block to ~/.ssh/config pinning the right key, so the wrong one stops winning by default (see d29ka).
 q2 and q3 remain the known open limits, stated in the README.

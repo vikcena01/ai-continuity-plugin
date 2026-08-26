@@ -100,6 +100,8 @@ export interface Provenance {
 
 /** One durable unit of project knowledge. Persisted as a single markdown file. */
 export interface Claim {
+  /** Claim-file schema version. See SCHEMA_VERSION. */
+  schema: number;
   id: string;
   type: ClaimType;
   title: string;
@@ -120,9 +122,62 @@ export interface Claim {
   tags: string[];
 }
 
-export function parseClaim(raw: string): Claim {
-  const { data, content } = matter(raw);
+/**
+ * Current claim-file schema version.
+ *
+ * The file format is a public contract the moment anyone else's repo holds
+ * claims, and this one moved three times in a week (the collision-safe id
+ * suffix, the `resolution` field, per-type status defaults). A version marker
+ * lives on EACH claim rather than in one .continuity/VERSION file so that every
+ * file self-describes: two clones on different versions then merge without a
+ * conflict, the same reasoning that made per-file claims the right unit.
+ *
+ * Absent means 1 — every claim written before versioning existed is, by
+ * definition, shape 1.
+ */
+export const SCHEMA_VERSION = 1;
+
+/**
+ * A claim written by a NEWER build than this one. Thrown rather than tolerated:
+ * quietly parsing a shape you do not understand is how state degrades without
+ * anyone noticing, which is the exact failure the version marker exists to
+ * prevent. Callers should surface this and tell the user to upgrade.
+ */
+export class SchemaTooNewError extends Error {
+  constructor(
+    readonly found: number,
+    readonly supported: number,
+    readonly source?: string,
+  ) {
+    super(
+      `${source ?? "claim"} declares schema ${found}, but this build of continuity supports ${supported}. ` +
+        "Upgrade continuity (or the plugin) to read it — refusing to guess at a newer format.",
+    );
+    this.name = "SchemaTooNewError";
+  }
+}
+
+/**
+ * Bring an older claim shape forward, in memory. Nothing to do at version 1;
+ * the hook exists so a future bump has one obvious place to add a step, and so
+ * reading old state never requires rewriting files on disk.
+ */
+function migrate(data: Record<string, unknown>, from: number): Record<string, unknown> {
+  let d = data;
+  let v = from;
+  // while (v < SCHEMA_VERSION) { ... d = stepN(d); v++; }
+  void v;
+  return d;
+}
+
+export function parseClaim(raw: string, source?: string): Claim {
+  const { data: raw_data, content } = matter(raw);
+  const declared = Number(raw_data.schema ?? SCHEMA_VERSION);
+  const found = Number.isFinite(declared) && declared >= 1 ? declared : SCHEMA_VERSION;
+  if (found > SCHEMA_VERSION) throw new SchemaTooNewError(found, SCHEMA_VERSION, source);
+  const data = migrate(raw_data as Record<string, unknown>, found) as typeof raw_data;
   return {
+    schema: SCHEMA_VERSION,
     id: data.id,
     type: data.type,
     title: data.title,
@@ -143,6 +198,7 @@ export function parseClaim(raw: string): Claim {
 
 export function serializeClaim(c: Claim): string {
   const fm: Record<string, unknown> = {
+    schema: SCHEMA_VERSION,
     id: c.id,
     type: c.type,
     title: c.title,

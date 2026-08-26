@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { Store } from "./core/store.js";
 import { renderResumeContext } from "./core/resume.js";
-import { ClaimType, Claim, Confidence, Status } from "./core/claim.js";
+import { ClaimType, Claim, Confidence, SCHEMA_VERSION, SchemaTooNewError, Status } from "./core/claim.js";
 import { commit, ensureRepo, log as gitLog, revert, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
 import { resolveClaim, ResolveAction } from "./core/resolve.js";
@@ -11,6 +11,11 @@ function fail(msg: string): never {
   console.error(msg);
   process.exit(1);
 }
+
+process.on("uncaughtException", (e) => {
+  if (e instanceof SchemaTooNewError) fail(`continuity: ${e.message}`);
+  throw e;
+});
 
 const [cmd, ...rest] = process.argv.slice(2);
 
@@ -192,6 +197,18 @@ switch (cmd) {
     break;
   }
 
+  case "migrate": {
+    // Rewrites every claim at the current schema. Reading old state never
+    // requires this - absent means 1 and migration happens in memory - but it
+    // makes the version explicit on disk, and the diff shows exactly what moved.
+    const s = getStore();
+    const claims = s.list();
+    for (const c of claims) s.write(c);
+    saveMsg(s, `continuity: migrate ${claims.length} claims to schema ${SCHEMA_VERSION}`);
+    console.log(`Rewrote ${claims.length} claims at schema ${SCHEMA_VERSION}.`);
+    break;
+  }
+
   case "list": {
     for (const c of getStore().list()) {
       console.log(`[${c.status.padStart(12)}] ${c.type.padStart(20)}  ${c.id.padEnd(8)}  ${c.title}`);
@@ -242,6 +259,7 @@ switch (cmd) {
   continuity supersede <old> <new> --reason "why"
   continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
+  continuity migrate                    (rewrite all claims at the current schema)
   continuity list
   continuity log
   continuity rollback <commit-ref>

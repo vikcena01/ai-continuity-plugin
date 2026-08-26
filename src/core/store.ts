@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { Claim, ClaimType, Confidence, Provenance, Status, defaultStatusFor, parseClaim, serializeClaim } from "./claim.js";
+import { Claim, ClaimType, Confidence, Provenance, SCHEMA_VERSION, Status, defaultStatusFor, parseClaim, serializeClaim } from "./claim.js";
 import { isRepo } from "./git.js";
 
 const STATE_DIR = ".continuity"; // repo-mode state dir
@@ -140,12 +140,12 @@ export class Store {
     if (!existsSync(dir)) return [];
     return readdirSync(dir)
       .filter((f) => f.endsWith(".md"))
-      .map((f) => parseClaim(readFileSync(join(dir, f), "utf8")));
+      .map((f) => parseClaim(readFileSync(join(dir, f), "utf8"), f));
   }
 
   get(id: string): Claim | undefined {
     const p = join(this.claimsDir(), `${id}.md`);
-    return existsSync(p) ? parseClaim(readFileSync(p, "utf8")) : undefined;
+    return existsSync(p) ? parseClaim(readFileSync(p, "utf8"), `${id}.md`) : undefined;
   }
 
   /** Find claims by exact id, else case-insensitive id/title substring (fuzzy handles). */
@@ -184,6 +184,7 @@ export class Store {
   }): Claim {
     const id = input.id ?? this.nextId(input.type);
     const claim: Claim = {
+      schema: SCHEMA_VERSION,
       id,
       type: input.type,
       title: input.title,

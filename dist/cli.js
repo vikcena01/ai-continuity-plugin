@@ -3579,9 +3579,31 @@ function defaultStatusFor(type) {
       return "accepted";
   }
 }
-function parseClaim(raw) {
-  const { data, content } = (0, import_gray_matter.default)(raw);
+var SCHEMA_VERSION = 1;
+var SchemaTooNewError = class extends Error {
+  constructor(found, supported, source) {
+    super(
+      `${source ?? "claim"} declares schema ${found}, but this build of continuity supports ${supported}. Upgrade continuity (or the plugin) to read it \u2014 refusing to guess at a newer format.`
+    );
+    this.found = found;
+    this.supported = supported;
+    this.source = source;
+    this.name = "SchemaTooNewError";
+  }
+};
+function migrate(data, from) {
+  let d = data;
+  let v = from;
+  return d;
+}
+function parseClaim(raw, source) {
+  const { data: raw_data, content } = (0, import_gray_matter.default)(raw);
+  const declared = Number(raw_data.schema ?? SCHEMA_VERSION);
+  const found = Number.isFinite(declared) && declared >= 1 ? declared : SCHEMA_VERSION;
+  if (found > SCHEMA_VERSION) throw new SchemaTooNewError(found, SCHEMA_VERSION, source);
+  const data = migrate(raw_data, found);
   return {
+    schema: SCHEMA_VERSION,
     id: data.id,
     type: data.type,
     title: data.title,
@@ -3601,6 +3623,7 @@ function parseClaim(raw) {
 }
 function serializeClaim(c) {
   const fm = {
+    schema: SCHEMA_VERSION,
     id: c.id,
     type: c.type,
     title: c.title,
@@ -3794,11 +3817,11 @@ var Store = class _Store {
   list() {
     const dir = this.claimsDir();
     if (!existsSync(dir)) return [];
-    return readdirSync(dir).filter((f) => f.endsWith(".md")).map((f) => parseClaim(readFileSync(join(dir, f), "utf8")));
+    return readdirSync(dir).filter((f) => f.endsWith(".md")).map((f) => parseClaim(readFileSync(join(dir, f), "utf8"), f));
   }
   get(id) {
     const p = join(this.claimsDir(), `${id}.md`);
-    return existsSync(p) ? parseClaim(readFileSync(p, "utf8")) : void 0;
+    return existsSync(p) ? parseClaim(readFileSync(p, "utf8"), `${id}.md`) : void 0;
   }
   /** Find claims by exact id, else case-insensitive id/title substring (fuzzy handles). */
   resolveClaims(query) {
@@ -3820,6 +3843,7 @@ var Store = class _Store {
   record(input) {
     const id = input.id ?? this.nextId(input.type);
     const claim = {
+      schema: SCHEMA_VERSION,
       id,
       type: input.type,
       title: input.title,
@@ -4161,6 +4185,10 @@ function fail(msg) {
   console.error(msg);
   process.exit(1);
 }
+process.on("uncaughtException", (e) => {
+  if (e instanceof SchemaTooNewError) fail(`continuity: ${e.message}`);
+  throw e;
+});
 var [cmd, ...rest] = process.argv.slice(2);
 var BOOLEAN_FLAGS = /* @__PURE__ */ new Set(["accept", "reject", "close", "unfreeze"]);
 function bool(name) {
@@ -4316,6 +4344,14 @@ switch (cmd) {
     if (out.superseded) console.log(`  superseded [${out.superseded}] \u2014 lineage kept, run 'continuity why ${out.id}'`);
     break;
   }
+  case "migrate": {
+    const s = getStore();
+    const claims = s.list();
+    for (const c of claims) s.write(c);
+    saveMsg(s, `continuity: migrate ${claims.length} claims to schema ${SCHEMA_VERSION}`);
+    console.log(`Rewrote ${claims.length} claims at schema ${SCHEMA_VERSION}.`);
+    break;
+  }
   case "list": {
     for (const c of getStore().list()) {
       console.log(`[${c.status.padStart(12)}] ${c.type.padStart(20)}  ${c.id.padEnd(8)}  ${c.title}`);
@@ -4362,6 +4398,7 @@ switch (cmd) {
   continuity supersede <old> <new> --reason "why"
   continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
+  continuity migrate                    (rewrite all claims at the current schema)
   continuity list
   continuity log
   continuity rollback <commit-ref>

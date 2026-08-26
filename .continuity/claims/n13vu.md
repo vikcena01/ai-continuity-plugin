@@ -28,4 +28,4 @@ Do first, while rewriting is still free:
 
 Then submit: `claude plugin validate .` (already passing), then platform.claude.com/plugins/submit — the Console form, NOT the claude.ai one, which requires a Team/Enterprise org. After that, treat the history as frozen.
 
-Optional, the user's own file: a `Host github.com` block in ~/.ssh/config pinning the personal-account key (d29ka).
+Optional, the user's own file: a `Host github.com` block in ~/.ssh/config pinning the right key (d29ka).
