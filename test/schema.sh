@@ -67,7 +67,8 @@ ok "refusal names the file"        'echo "$out" | grep -q "future1.md"'
 ok "refusal reports both versions" 'echo "$out" | grep -q "schema 99" && echo "$out" | grep -q "supports 1"'
 ok "refusal says to upgrade"       'echo "$out" | grep -qi "upgrade"'
 ok "it does NOT half-parse"        '! echo "$out" | grep -q "From a newer build"'
-ok "resume refuses too"            'C resume --project sc 2>&1 | grep -qi "upgrade"'
+res="$(C resume --project sc 2>&1 || true)"
+ok "resume refuses too"            'echo "$res" | grep -qi "upgrade"'
 
 # and the refusal is non-destructive
 ok "offending file left untouched" 'grep -q "^schema: 99$" "$CLAIMS/future1.md"'
