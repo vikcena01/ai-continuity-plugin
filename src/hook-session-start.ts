@@ -1,7 +1,7 @@
 // SessionStart hook: auto-inject the resume context into a new/resumed/compacted
 // session. This is the "effortless resume" — the user never has to ask.
 import { Store } from "./core/store.js";
-import { renderResumeContext } from "./core/resume.js";
+import { renderResumeContext, resumeOptionsFromEnv } from "./core/resume.js";
 import { unpushedCount } from "./core/git.js";
 import { readHookInput, throttle } from "./core/once.js";
 
@@ -25,6 +25,7 @@ if (claims.length) {
     renderResumeContext(
       claims,
       store ? { mode: store.mode, unpushed: unpushedCount(store.gitDir, store.gitPath) } : {},
+      resumeOptionsFromEnv(),
     );
 
   process.stdout.write(

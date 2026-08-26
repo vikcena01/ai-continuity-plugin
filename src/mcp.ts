@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { Store } from "./core/store.js";
-import { renderResumeContext } from "./core/resume.js";
+import { renderResumeContext, resumeOptionsFromEnv } from "./core/resume.js";
 import { commit, ensureRepo, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
 import { resolveClaim } from "./core/resolve.js";
@@ -25,7 +25,7 @@ function resolveStore(project?: string): Store {
 
 /** Resume context plus the where-does-this-live facts (central-mode + unpushed warnings). */
 function renderFor(s: Store): string {
-  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) });
+  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }, resumeOptionsFromEnv());
 }
 
 function save(s: Store, msg: string): void {

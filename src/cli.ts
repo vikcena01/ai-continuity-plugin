@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { Store } from "./core/store.js";
-import { renderResumeContext } from "./core/resume.js";
+import { renderResumeContext, resumeOptionsFromEnv } from "./core/resume.js";
 import { ClaimType, Claim, Confidence, SCHEMA_VERSION, SchemaTooNewError, Status } from "./core/claim.js";
 import { commit, ensureRepo, log as gitLog, revert, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
@@ -81,7 +81,7 @@ switch (cmd) {
   case "resume": {
     {
       const s = getStore();
-      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }));
+      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }, resumeOptionsFromEnv()));
     }
     break;
   }

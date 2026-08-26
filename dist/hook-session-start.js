@@ -2787,9 +2787,9 @@ var require_dumper = __commonJS({
     }
     function blockHeader(string, indentPerLevel) {
       var indentIndicator = needIndentIndicator(string) ? String(indentPerLevel) : "";
-      var clip = string[string.length - 1] === "\n";
-      var keep = clip && (string[string.length - 2] === "\n" || string === "\n");
-      var chomp = keep ? "+" : clip ? "" : "-";
+      var clip2 = string[string.length - 1] === "\n";
+      var keep = clip2 && (string[string.length - 2] === "\n" || string === "\n");
+      var chomp = keep ? "+" : clip2 ? "" : "-";
       return indentIndicator + chomp + "\n";
     }
     function dropEndingNewline(string) {
@@ -3837,11 +3837,30 @@ var Store = class _Store {
 };
 
 // src/core/resume.ts
+var DEFAULTS = { maxBytes: 16e3, maxBodyChars: 240 };
+function resumeOptionsFromEnv() {
+  const n = (v) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x > 0 ? x : void 0;
+  };
+  return {
+    maxBytes: n(process.env.CONTINUITY_RESUME_BYTES),
+    maxBodyChars: n(process.env.CONTINUITY_RESUME_BODY)
+  };
+}
 var LIVE = /* @__PURE__ */ new Set(["active", "accepted", "frozen", "open"]);
+function clip(text, max) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const at = cut.lastIndexOf(" ");
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()} \u2026`;
+}
 function by(claims2, types, statuses) {
   return claims2.filter((c) => types.includes(c.type) && (!statuses || statuses.has(c.status)));
 }
-function renderResumeContext(claims2, meta = {}) {
+function project(claims2, meta, o, level) {
+  const clipBody = (c, max = o.maxBodyChars) => c.body ? clip(c.body, max) : "";
+  const trimmed = [];
   const L = [];
   const predecessors = (id) => claims2.filter((c) => c.superseded_by === id);
   const mission = by(claims2, ["mission"], LIVE)[0];
@@ -3851,7 +3870,10 @@ function renderResumeContext(claims2, meta = {}) {
   if (mission?.body) L.push(`_${mission.body}_`);
   L.push("");
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
-  if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` \u2014 ${next.body}` : ""}`);
+  if (next) {
+    const nb = next.body ? clip(next.body, o.maxBodyChars * 3) : "";
+    L.push(`**Resume at:** ${next.title}${nb ? ` \u2014 ${nb}` : ""}`);
+  }
   L.push("");
   const sync = [];
   if (meta.mode === "central") {
@@ -3895,7 +3917,8 @@ function renderResumeContext(claims2, meta = {}) {
   if (decisions.length) {
     L.push("## Active decisions & architecture");
     for (const c of decisions) {
-      L.push(`- [${c.id}] ${c.title}${c.body ? ` \u2014 ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+      const b = level >= 2 ? "" : clipBody(c);
+      L.push(`- [${c.id}] ${c.title}${b ? ` \u2014 ${b}` : ""}  _(confidence: ${c.confidence})_`);
       for (const p of predecessors(c.id)) {
         L.push(`    \u21B3 replaced [${p.id}] "${p.title}" \u2014 because: ${p.superseded_reason ?? ""}`);
       }
@@ -3906,7 +3929,8 @@ function renderResumeContext(claims2, meta = {}) {
   if (cons.length) {
     L.push("## Active constraints");
     for (const c of cons) {
-      L.push(`- [${c.id}] ${c.title}${c.body ? ` \u2014 ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+      const b = level >= 2 ? "" : clipBody(c);
+      L.push(`- [${c.id}] ${c.title}${b ? ` \u2014 ${b}` : ""}  _(confidence: ${c.confidence})_`);
     }
     L.push("");
   }
@@ -3918,22 +3942,42 @@ function renderResumeContext(claims2, meta = {}) {
   if (rejected.length) {
     L.push("## \u{1F6AB} Do NOT revisit (already rejected \u2014 do not re-propose)");
     for (const c of rejected) {
-      L.push(`- [${c.id}] ${c.title} \u2014 REJECTED because: ${c.reason ?? c.resolution ?? c.body}`);
+      L.push(`- [${c.id}] ${c.title} \u2014 REJECTED because: ${clip(c.reason ?? c.resolution ?? c.body, o.maxBodyChars * 2)}`);
     }
     L.push("");
   }
   const opens = by(claims2, ["question", "risk"], /* @__PURE__ */ new Set(["open"]));
-  if (opens.length) {
+  if (opens.length && level >= 3) {
+    trimmed.push(`${opens.length} open question${opens.length === 1 ? "" : "s"}/risks omitted`);
+  } else if (opens.length) {
     L.push("## Open questions / risks");
     for (const c of opens) {
-      L.push(`- [${c.id}] ${c.title}${c.body ? ` \u2014 ${c.body}` : ""}`);
+      const b = level >= 1 ? "" : clipBody(c);
+      L.push(`- [${c.id}] ${c.title}${b ? ` \u2014 ${b}` : ""}`);
     }
+    L.push("");
+  }
+  if (level >= 1) trimmed.push("bodies shortened");
+  if (trimmed.length) {
+    L.push(`_Trimmed to fit: ${trimmed.join("; ")}. Full text in .continuity/claims/ \u2014 \`continuity list\` or \`continuity why <id>\`._`);
     L.push("");
   }
   const hasContent = L.some((l) => l.startsWith("- ") || l.startsWith("**"));
   if (!hasContent) L.push("_No project state captured yet. Record decisions as you make them._");
   return `${L.join("\n").trimEnd()}
 `;
+}
+function renderResumeContext(claims2, meta = {}, opts = {}) {
+  const o = {
+    maxBytes: opts.maxBytes ?? DEFAULTS.maxBytes,
+    maxBodyChars: opts.maxBodyChars ?? DEFAULTS.maxBodyChars
+  };
+  let out = "";
+  for (let level = 0; level <= 3; level++) {
+    out = project(claims2, meta, o, level);
+    if (Buffer.byteLength(out, "utf8") <= o.maxBytes) return out;
+  }
+  return out;
 }
 
 // src/core/once.ts
@@ -3980,7 +4024,8 @@ var claims = store?.list() ?? [];
 if (claims.length) {
   const additionalContext = "Restored project state from the Continuity layer. Treat \u{1F512} FROZEN items and \u{1F6AB} rejected alternatives as authoritative \u2014 do not re-open or re-propose them.\n\n" + renderResumeContext(
     claims,
-    store ? { mode: store.mode, unpushed: unpushedCount(store.gitDir, store.gitPath) } : {}
+    store ? { mode: store.mode, unpushed: unpushedCount(store.gitDir, store.gitPath) } : {},
+    resumeOptionsFromEnv()
   );
   process.stdout.write(
     JSON.stringify({

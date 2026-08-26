@@ -9673,9 +9673,9 @@ var require_dumper = __commonJS({
     }
     function blockHeader(string3, indentPerLevel) {
       var indentIndicator = needIndentIndicator(string3) ? String(indentPerLevel) : "";
-      var clip = string3[string3.length - 1] === "\n";
-      var keep = clip && (string3[string3.length - 2] === "\n" || string3 === "\n");
-      var chomp = keep ? "+" : clip ? "" : "-";
+      var clip2 = string3[string3.length - 1] === "\n";
+      var keep = clip2 && (string3[string3.length - 2] === "\n" || string3 === "\n");
+      var chomp = keep ? "+" : clip2 ? "" : "-";
       return indentIndicator + chomp + "\n";
     }
     function dropEndingNewline(string3) {
@@ -25028,11 +25028,30 @@ var Store = class _Store {
 };
 
 // src/core/resume.ts
+var DEFAULTS = { maxBytes: 16e3, maxBodyChars: 240 };
+function resumeOptionsFromEnv() {
+  const n = (v) => {
+    const x = Number(v);
+    return Number.isFinite(x) && x > 0 ? x : void 0;
+  };
+  return {
+    maxBytes: n(process.env.CONTINUITY_RESUME_BYTES),
+    maxBodyChars: n(process.env.CONTINUITY_RESUME_BODY)
+  };
+}
 var LIVE = /* @__PURE__ */ new Set(["active", "accepted", "frozen", "open"]);
+function clip(text2, max) {
+  if (text2.length <= max) return text2;
+  const cut = text2.slice(0, max);
+  const at = cut.lastIndexOf(" ");
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()} \u2026`;
+}
 function by(claims, types, statuses) {
   return claims.filter((c) => types.includes(c.type) && (!statuses || statuses.has(c.status)));
 }
-function renderResumeContext(claims, meta = {}) {
+function project(claims, meta, o, level) {
+  const clipBody = (c, max = o.maxBodyChars) => c.body ? clip(c.body, max) : "";
+  const trimmed = [];
   const L = [];
   const predecessors = (id) => claims.filter((c) => c.superseded_by === id);
   const mission = by(claims, ["mission"], LIVE)[0];
@@ -25042,7 +25061,10 @@ function renderResumeContext(claims, meta = {}) {
   if (mission?.body) L.push(`_${mission.body}_`);
   L.push("");
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
-  if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` \u2014 ${next.body}` : ""}`);
+  if (next) {
+    const nb = next.body ? clip(next.body, o.maxBodyChars * 3) : "";
+    L.push(`**Resume at:** ${next.title}${nb ? ` \u2014 ${nb}` : ""}`);
+  }
   L.push("");
   const sync = [];
   if (meta.mode === "central") {
@@ -25086,7 +25108,8 @@ function renderResumeContext(claims, meta = {}) {
   if (decisions.length) {
     L.push("## Active decisions & architecture");
     for (const c of decisions) {
-      L.push(`- [${c.id}] ${c.title}${c.body ? ` \u2014 ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+      const b = level >= 2 ? "" : clipBody(c);
+      L.push(`- [${c.id}] ${c.title}${b ? ` \u2014 ${b}` : ""}  _(confidence: ${c.confidence})_`);
       for (const p of predecessors(c.id)) {
         L.push(`    \u21B3 replaced [${p.id}] "${p.title}" \u2014 because: ${p.superseded_reason ?? ""}`);
       }
@@ -25097,7 +25120,8 @@ function renderResumeContext(claims, meta = {}) {
   if (cons.length) {
     L.push("## Active constraints");
     for (const c of cons) {
-      L.push(`- [${c.id}] ${c.title}${c.body ? ` \u2014 ${c.body}` : ""}  _(confidence: ${c.confidence})_`);
+      const b = level >= 2 ? "" : clipBody(c);
+      L.push(`- [${c.id}] ${c.title}${b ? ` \u2014 ${b}` : ""}  _(confidence: ${c.confidence})_`);
     }
     L.push("");
   }
@@ -25109,22 +25133,42 @@ function renderResumeContext(claims, meta = {}) {
   if (rejected.length) {
     L.push("## \u{1F6AB} Do NOT revisit (already rejected \u2014 do not re-propose)");
     for (const c of rejected) {
-      L.push(`- [${c.id}] ${c.title} \u2014 REJECTED because: ${c.reason ?? c.resolution ?? c.body}`);
+      L.push(`- [${c.id}] ${c.title} \u2014 REJECTED because: ${clip(c.reason ?? c.resolution ?? c.body, o.maxBodyChars * 2)}`);
     }
     L.push("");
   }
   const opens = by(claims, ["question", "risk"], /* @__PURE__ */ new Set(["open"]));
-  if (opens.length) {
+  if (opens.length && level >= 3) {
+    trimmed.push(`${opens.length} open question${opens.length === 1 ? "" : "s"}/risks omitted`);
+  } else if (opens.length) {
     L.push("## Open questions / risks");
     for (const c of opens) {
-      L.push(`- [${c.id}] ${c.title}${c.body ? ` \u2014 ${c.body}` : ""}`);
+      const b = level >= 1 ? "" : clipBody(c);
+      L.push(`- [${c.id}] ${c.title}${b ? ` \u2014 ${b}` : ""}`);
     }
+    L.push("");
+  }
+  if (level >= 1) trimmed.push("bodies shortened");
+  if (trimmed.length) {
+    L.push(`_Trimmed to fit: ${trimmed.join("; ")}. Full text in .continuity/claims/ \u2014 \`continuity list\` or \`continuity why <id>\`._`);
     L.push("");
   }
   const hasContent = L.some((l) => l.startsWith("- ") || l.startsWith("**"));
   if (!hasContent) L.push("_No project state captured yet. Record decisions as you make them._");
   return `${L.join("\n").trimEnd()}
 `;
+}
+function renderResumeContext(claims, meta = {}, opts = {}) {
+  const o = {
+    maxBytes: opts.maxBytes ?? DEFAULTS.maxBytes,
+    maxBodyChars: opts.maxBodyChars ?? DEFAULTS.maxBodyChars
+  };
+  let out = "";
+  for (let level = 0; level <= 3; level++) {
+    out = project(claims, meta, o, level);
+    if (Buffer.byteLength(out, "utf8") <= o.maxBytes) return out;
+  }
+  return out;
 }
 
 // src/core/reconcile.ts
@@ -25289,8 +25333,8 @@ function resolveClaim(store, input) {
 
 // src/mcp.ts
 var text = (t) => ({ content: [{ type: "text", text: t }] });
-function resolveStore(project) {
-  const s = Store.resolve({ project });
+function resolveStore(project2) {
+  const s = Store.resolve({ project: project2 });
   if (!s) {
     const known = Store.listProjects().join(", ") || "none";
     throw new Error(
@@ -25300,7 +25344,7 @@ function resolveStore(project) {
   return s;
 }
 function renderFor(s) {
-  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) });
+  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }, resumeOptionsFromEnv());
 }
 function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
@@ -25334,14 +25378,14 @@ server.tool(
   "resume_context",
   "Return the current project state to resume work: mission, frozen constraints, active decisions (with the reasons they superseded older ones), rejected paths not to re-propose, open questions, and the next step. Call at the start of a session.",
   { ...projectArg },
-  async ({ project }) => text(renderFor(resolveStore(project)))
+  async ({ project: project2 }) => text(renderFor(resolveStore(project2)))
 );
 server.tool(
   "record_decision",
   "Record a decision the project has settled on. Capture autonomously as you observe it.",
   { ...projectArg, title: external_exports.string(), body: external_exports.string().optional(), confidence: external_exports.enum(["confirmed", "tentative"]).optional() },
-  async ({ project, title, body, confidence }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, title, body, confidence }) => {
+    const s = resolveStore(project2);
     const c = s.record({ type: "decision", title, body, confidence: confidence ?? "tentative", origin: "auto" });
     save(s, `continuity: record decision ${c.id}`);
     return text(`Recorded decision [${c.id}] (${c.confidence})`);
@@ -25351,8 +25395,8 @@ server.tool(
   "record_constraint",
   "Record a constraint future work must respect.",
   { ...projectArg, title: external_exports.string(), body: external_exports.string().optional() },
-  async ({ project, title, body }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, title, body }) => {
+    const s = resolveStore(project2);
     const c = s.record({ type: "constraint", title, body, confidence: "confirmed", origin: "auto" });
     save(s, `continuity: record constraint ${c.id}`);
     return text(`Recorded constraint [${c.id}]`);
@@ -25362,8 +25406,8 @@ server.tool(
   "record_rejection",
   "Record an alternative that was considered and rejected, and WHY \u2014 so no future session re-proposes it.",
   { ...projectArg, title: external_exports.string(), reason: external_exports.string() },
-  async ({ project, title, reason }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, title, reason }) => {
+    const s = resolveStore(project2);
     const c = s.record({ type: "rejected_alternative", title, status: "rejected", reason, confidence: "confirmed", origin: "auto" });
     save(s, `continuity: reject ${c.id}`);
     return text(`Recorded rejection [${c.id}]`);
@@ -25373,8 +25417,8 @@ server.tool(
   "record_open",
   "Record an open question, risk, milestone, or next action. type is one of: question | risk | milestone | next_action.",
   { ...projectArg, type: external_exports.enum(["question", "risk", "milestone", "next_action"]), title: external_exports.string(), body: external_exports.string().optional() },
-  async ({ project, type, title, body }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, type, title, body }) => {
+    const s = resolveStore(project2);
     const c = s.record({ type, title, body, status: "open", confidence: "confirmed", origin: "auto" });
     save(s, `continuity: record ${type} ${c.id}`);
     return text(`Recorded ${type} [${c.id}]`);
@@ -25398,8 +25442,8 @@ server.tool(
       })
     ).describe("Batch of capture ops.")
   },
-  async ({ project, ops }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, ops }) => {
+    const s = resolveStore(project2);
     const r = reconcile(s, ops);
     save(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
     const lines = [
@@ -25416,8 +25460,8 @@ server.tool(
   "freeze_claim",
   "Freeze a claim so it must never change \u2014 the one deliberate lock. Use only on explicit user request. Accepts an id or a title substring.",
   { ...projectArg, id: external_exports.string() },
-  async ({ project, id }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, id }) => {
+    const s = resolveStore(project2);
     const matches = s.resolveClaims(id);
     if (matches.length === 0) return text(`No claim matches "${id}".`);
     if (matches.length > 1) return text(`Ambiguous "${id}": ${matches.map((c) => c.id).join(", ")}`);
@@ -25436,8 +25480,8 @@ server.tool(
     reason: external_exports.string().describe("Why it is being closed. Required \u2014 this is what a future session reads."),
     unfreeze: external_exports.boolean().optional().describe("Only to accept a claim parked against a FROZEN one. Requires the user's explicit go-ahead.")
   },
-  async ({ project, claim, action, reason, unfreeze }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, claim, action, reason, unfreeze }) => {
+    const s = resolveStore(project2);
     try {
       const r = resolveClaim(s, { query: claim, action, reason, unfreeze });
       save(s, `continuity: resolve ${r.id} ${r.from} -> ${r.to} (${r.action})`);
@@ -25452,8 +25496,8 @@ server.tool(
   "why",
   "Explain what a claim replaced and why (supersession lineage). Accepts an id or a title substring.",
   { ...projectArg, id: external_exports.string() },
-  async ({ project, id }) => {
-    const s = resolveStore(project);
+  async ({ project: project2, id }) => {
+    const s = resolveStore(project2);
     const matches = s.resolveClaims(id);
     if (matches.length !== 1) return text(matches.length === 0 ? `No claim matches "${id}".` : `Ambiguous: ${matches.map((c) => c.id).join(", ")}`);
     const cur = matches[0];
@@ -25469,13 +25513,13 @@ server.prompt(
   "resume",
   "Load this project's continuity state into the conversation.",
   { ...projectArg },
-  ({ project }) => ({
+  ({ project: project2 }) => ({
     messages: [
       {
         role: "user",
         content: {
           type: "text",
-          text: "Here is the restored project state. Treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open them. Continue from the next step.\n\n" + renderFor(resolveStore(project))
+          text: "Here is the restored project state. Treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open them. Continue from the next step.\n\n" + renderFor(resolveStore(project2))
         }
       }
     ]
