@@ -2,6 +2,7 @@
   "name": "continuity",
   "version": "0.1.0",
   "description": "Portable, git-backed project-state for long-running AI work. Resume any AI session without losing decisions, constraints, or direction.",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "continuity": "dist/cli.js"

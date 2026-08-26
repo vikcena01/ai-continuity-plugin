@@ -3,15 +3,24 @@
   "displayName": "Continuity",
   "version": "0.1.0",
   "description": "Portable, git-backed project-state. Resume any session without losing decisions, constraints, or direction.",
+  "license": "MIT",
   "author": {
     "name": "vikash",
     "email": "vikcena01@gmail.com"
   },
-  "keywords": ["continuity", "memory", "project-state", "mcp", "resume"],
+  "keywords": [
+    "continuity",
+    "memory",
+    "project-state",
+    "mcp",
+    "resume"
+  ],
   "mcpServers": {
     "continuity": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/mcp.js"]
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/mcp.js"
+      ]
     }
   }
 }
