@@ -20,15 +20,15 @@ C reject "DynamoDB as primary store" --reason "KV overhead unjustified" --projec
 C record-decision "Use 302 redirects" --project demo >/dev/null
 C record-decision "Use 301 permanent redirects" --project demo >/dev/null
 
-# short, typeable ids
+# short, typeable ids: <prefix><n><2-char suffix>, e.g. d1k3 (the rk2 fix)
 ids="$(C list --project demo)"
-ok "ids are short (d1 present)"        '[[ "$ids" == *" d1 "* ]] || echo "$ids" | grep -q " d1 "'
-ok "constraint id c1 present"          'echo "$ids" | grep -q " c1 "'
-ok "rejection id x1 present"           'echo "$ids" | grep -q " x1 "'
+ok "decision id looks like d1<sfx>"    'echo "$ids" | grep -qE " d1[a-z][a-z0-9] "'
+ok "constraint id looks like c1<sfx>"  'echo "$ids" | grep -qE " c1[a-z][a-z0-9] "'
+ok "rejection id looks like x1<sfx>"   'echo "$ids" | grep -qE " x1[a-z][a-z0-9] "'
 
 # fuzzy freeze by text (no need to know the id)
 C freeze "7-char base62" --project demo >/dev/null
-ok "fuzzy freeze worked (c1 frozen)"   'C list --project demo | grep -q "frozen.*c1"'
+ok "fuzzy freeze worked (constraint)"  'C list --project demo | grep -qE "frozen.* c1[a-z][a-z0-9] "'
 
 # supersession by fuzzy text + reason travels
 C supersede "302 redirects" "301 permanent" --reason "302 hook obsolete once analytics moved async" --project demo >/dev/null

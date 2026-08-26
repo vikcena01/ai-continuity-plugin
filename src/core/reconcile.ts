@@ -1,5 +1,5 @@
 import { Store } from "./store.js";
-import { Claim, ClaimType } from "./claim.js";
+import { CLAIM_TYPES, Claim, ClaimType, normalizeType } from "./claim.js";
 
 /**
  * The reconciler: the safety net that makes autonomous capture trustworthy.
@@ -37,6 +37,29 @@ export interface CaptureResult {
 const LIVE = new Set<string>(["active", "accepted", "frozen", "open"]);
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+/**
+ * Resolve a caller-supplied type string to a real ClaimType, or record a note and
+ * return null. The reconciler's job is to keep autonomous capture from degrading
+ * the state, and an unvalidated type does exactly that: it used to be cast
+ * straight to ClaimType, so "open_question" slipped past the union and minted
+ * ids like `ope1` instead of `q3`, quietly forking the vocabulary so those claims
+ * never appeared in the right resume section.
+ */
+function resolveType(
+  raw: string | undefined,
+  fallback: ClaimType,
+  title: string,
+  res: CaptureResult,
+): ClaimType | null {
+  if (!raw) return fallback;
+  const t = normalizeType(raw);
+  if (!t) {
+    res.notes.push(`skipped "${title}": unknown type "${raw}" — valid types: ${CLAIM_TYPES.join(", ")}`);
+    return null;
+  }
+  return t;
+}
+
 function findOne(store: Store, q: string): Claim | undefined {
   const m = store.resolveClaims(q);
   return m.length === 1 ? m[0] : undefined;
@@ -49,6 +72,12 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
     const live = store.list().filter((c) => LIVE.has(c.status));
 
     if (op.op === "add" || op.op === "reject") {
+      const type =
+        op.op === "reject"
+          ? "rejected_alternative"
+          : resolveType(op.type, "decision", op.title, res);
+      if (!type) continue;
+
       const dup = live.find((c) => norm(c.title) === norm(op.title));
       if (dup) {
         res.duplicates.push(`${dup.id} ("${op.title}")`);
@@ -60,7 +89,7 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         const target = findOne(store, op.conflicts_with);
         if (target && target.status === "frozen") {
           const c = store.record({
-            type: op.op === "reject" ? "rejected_alternative" : ((op.type as ClaimType) ?? "decision"),
+            type,
             title: op.title,
             body: op.body,
             reason: op.reason,
@@ -75,7 +104,7 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
       }
 
       const c = store.record({
-        type: op.op === "reject" ? "rejected_alternative" : ((op.type as ClaimType) ?? "decision"),
+        type,
         title: op.title,
         body: op.body,
         reason: op.reason,
@@ -93,10 +122,13 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         res.notes.push(`supersede skipped: could not uniquely resolve "${op.old}"`);
         continue;
       }
+      const type = resolveType(op.type, old.type, op.title, res);
+      if (!type) continue;
+
       // frozen guard: never auto-supersede a frozen claim; park the proposal.
       if (old.status === "frozen") {
         const c = store.record({
-          type: (op.type as ClaimType) ?? old.type,
+          type,
           title: op.title,
           body: op.body,
           reason: op.reason,
@@ -109,7 +141,7 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         continue;
       }
       const fresh = store.record({
-        type: (op.type as ClaimType) ?? old.type,
+        type,
         title: op.title,
         body: op.body,
         status: "accepted",

@@ -199,11 +199,11 @@ var require_section_matter = __commonJS({
     "use strict";
     var typeOf = require_kind_of();
     var extend = require_extend_shallow();
-    module2.exports = function(input, options2) {
+    module2.exports = function(input2, options2) {
       if (typeof options2 === "function") {
         options2 = { parse: options2 };
       }
-      var file = toObject(input);
+      var file = toObject(input2);
       var defaults = { section_delimiter: "---", parse: identity };
       var opts = extend({}, defaults, options2);
       var delim = opts.section_delimiter;
@@ -271,16 +271,16 @@ var require_section_matter = __commonJS({
       }
       return true;
     }
-    function toObject(input) {
-      if (typeOf(input) !== "object") {
-        input = { content: input };
+    function toObject(input2) {
+      if (typeOf(input2) !== "object") {
+        input2 = { content: input2 };
       }
-      if (typeof input.content !== "string" && !isBuffer(input.content)) {
+      if (typeof input2.content !== "string" && !isBuffer(input2.content)) {
         throw new TypeError("expected a buffer or string");
       }
-      input.content = input.content.toString();
-      input.sections = [];
-      return input;
+      input2.content = input2.content.toString();
+      input2.sections = [];
+      return input2;
     }
     function getKey(val, delim) {
       return val ? val.slice(delim.length).trim() : "";
@@ -1075,14 +1075,14 @@ var require_binary = __commonJS({
       return bitlen % 8 === 0;
     }
     function constructYamlBinary(data) {
-      var idx, tailbits, input = data.replace(/[\r\n=]/g, ""), max = input.length, map = BASE64_MAP, bits = 0, result = [];
+      var idx, tailbits, input2 = data.replace(/[\r\n=]/g, ""), max = input2.length, map = BASE64_MAP, bits = 0, result = [];
       for (idx = 0; idx < max; idx++) {
         if (idx % 4 === 0 && idx) {
           result.push(bits >> 16 & 255);
           result.push(bits >> 8 & 255);
           result.push(bits & 255);
         }
-        bits = bits << 6 | map.indexOf(input.charAt(idx));
+        bits = bits << 6 | map.indexOf(input2.charAt(idx));
       }
       tailbits = max % 4 * 6;
       if (tailbits === 0) {
@@ -1509,8 +1509,8 @@ var require_loader = __commonJS({
       simpleEscapeMap[i] = simpleEscapeSequence(i);
     }
     var i;
-    function State(input, options2) {
-      this.input = input;
+    function State(input2, options2) {
+      this.input = input2;
       this.filename = options2["filename"] || null;
       this.schema = options2["schema"] || DEFAULT_FULL_SCHEMA;
       this.onWarning = options2["onWarning"] || null;
@@ -1520,7 +1520,7 @@ var require_loader = __commonJS({
       this.maxTotalMergeKeys = typeof options2["maxTotalMergeKeys"] === "number" ? options2["maxTotalMergeKeys"] : 1e4;
       this.implicitTypes = this.schema.compiledImplicit;
       this.typeMap = this.schema.compiledTypeMap;
-      this.length = input.length;
+      this.length = input2.length;
       this.position = 0;
       this.line = 0;
       this.lineStart = 0;
@@ -2470,19 +2470,19 @@ var require_loader = __commonJS({
         return;
       }
     }
-    function loadDocuments(input, options2) {
-      input = String(input);
+    function loadDocuments(input2, options2) {
+      input2 = String(input2);
       options2 = options2 || {};
-      if (input.length !== 0) {
-        if (input.charCodeAt(input.length - 1) !== 10 && input.charCodeAt(input.length - 1) !== 13) {
-          input += "\n";
+      if (input2.length !== 0) {
+        if (input2.charCodeAt(input2.length - 1) !== 10 && input2.charCodeAt(input2.length - 1) !== 13) {
+          input2 += "\n";
         }
-        if (input.charCodeAt(0) === 65279) {
-          input = input.slice(1);
+        if (input2.charCodeAt(0) === 65279) {
+          input2 = input2.slice(1);
         }
       }
-      var state = new State(input, options2);
-      var nullpos = input.indexOf("\0");
+      var state = new State(input2, options2);
+      var nullpos = input2.indexOf("\0");
       if (nullpos !== -1) {
         state.position = nullpos;
         throwError(state, "null byte is not allowed in input");
@@ -2497,12 +2497,12 @@ var require_loader = __commonJS({
       }
       return state.documents;
     }
-    function loadAll(input, iterator, options2) {
+    function loadAll(input2, iterator, options2) {
       if (iterator !== null && typeof iterator === "object" && typeof options2 === "undefined") {
         options2 = iterator;
         iterator = null;
       }
-      var documents = loadDocuments(input, options2);
+      var documents = loadDocuments(input2, options2);
       if (typeof iterator !== "function") {
         return documents;
       }
@@ -2510,8 +2510,8 @@ var require_loader = __commonJS({
         iterator(documents[index]);
       }
     }
-    function load(input, options2) {
-      var documents = loadDocuments(input, options2);
+    function load(input2, options2) {
+      var documents = loadDocuments(input2, options2);
       if (documents.length === 0) {
         return void 0;
       } else if (documents.length === 1) {
@@ -2519,15 +2519,15 @@ var require_loader = __commonJS({
       }
       throw new YAMLException("expected a single document in the stream, but found more");
     }
-    function safeLoadAll(input, iterator, options2) {
+    function safeLoadAll(input2, iterator, options2) {
       if (typeof iterator === "object" && iterator !== null && typeof options2 === "undefined") {
         options2 = iterator;
         iterator = null;
       }
-      return loadAll(input, iterator, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
+      return loadAll(input2, iterator, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
     }
-    function safeLoad(input, options2) {
-      return load(input, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
+    function safeLoad(input2, options2) {
+      return load(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
     }
     module2.exports.loadAll = loadAll;
     module2.exports.load = load;
@@ -3069,15 +3069,15 @@ var require_dumper = __commonJS({
         }
       }
     }
-    function dump(input, options2) {
+    function dump(input2, options2) {
       options2 = options2 || {};
       var state = new State(options2);
-      if (!state.noRefs) getDuplicateReferences(input, state);
-      if (writeNode(state, 0, input, true, true)) return state.dump + "\n";
+      if (!state.noRefs) getDuplicateReferences(input2, state);
+      if (writeNode(state, 0, input2, true, true)) return state.dump + "\n";
       return "";
     }
-    function safeDump(input, options2) {
-      return dump(input, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
+    function safeDump(input2, options2) {
+      return dump(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
     }
     module2.exports.dump = dump;
     module2.exports.safeDump = safeDump;
@@ -3199,15 +3199,15 @@ var require_utils = __commonJS({
     exports2.isObject = function(val) {
       return typeOf(val) === "object";
     };
-    exports2.toBuffer = function(input) {
-      return typeof input === "string" ? Buffer.from(input) : input;
+    exports2.toBuffer = function(input2) {
+      return typeof input2 === "string" ? Buffer.from(input2) : input2;
     };
-    exports2.toString = function(input) {
-      if (exports2.isBuffer(input)) return stripBom(String(input));
-      if (typeof input !== "string") {
+    exports2.toString = function(input2) {
+      if (exports2.isBuffer(input2)) return stripBom(String(input2));
+      if (typeof input2 !== "string") {
         throw new TypeError("expected input to be a string or buffer");
       }
-      return stripBom(input);
+      return stripBom(input2);
     };
     exports2.arrayify = function(val) {
       return val ? Array.isArray(val) ? val : [val] : [];
@@ -3416,11 +3416,11 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse2 = require_parse();
     var utils = require_utils();
-    function matter2(input, options2) {
-      if (input === "") {
-        return { data: {}, content: input, excerpt: "", orig: input };
+    function matter2(input2, options2) {
+      if (input2 === "") {
+        return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
-      let file = toFile(input);
+      let file = toFile(input2);
       const cached = matter2.cache[file.content];
       if (!options2) {
         if (cached) {
@@ -3520,9 +3520,10 @@ var require_gray_matter = __commonJS({
 });
 
 // src/core/store.ts
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 // src/core/claim.ts
 var import_gray_matter = __toESM(require_gray_matter(), 1);
@@ -3567,6 +3568,33 @@ ${c.body}
 `, clean);
 }
 
+// src/core/git.ts
+import { execFileSync } from "node:child_process";
+function git(dir, args) {
+  return execFileSync("git", ["-C", dir, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+}
+function isRepo(dir) {
+  try {
+    git(dir, ["rev-parse", "--is-inside-work-tree"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function unpushedCount(dir, addPath) {
+  try {
+    git(dir, ["rev-parse", "--abbrev-ref", "@{u}"]);
+  } catch {
+    return null;
+  }
+  try {
+    const n = Number(git(dir, ["rev-list", "--count", "@{u}..HEAD", "--", addPath]).trim());
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 // src/core/store.ts
 var STATE_DIR = ".continuity";
 var CLAIMS = "claims";
@@ -3587,6 +3615,11 @@ var TYPE_PREFIX = {
 function projectsHome() {
   return process.env.CONTINUITY_HOME || join(homedir(), ".continuity", "projects");
 }
+var SUFFIX_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+function randomSuffix() {
+  const b = randomBytes(2);
+  return SUFFIX_ALPHABET[b[0] % 26] + SUFFIX_ALPHABET[b[1] % SUFFIX_ALPHABET.length];
+}
 var Store = class _Store {
   /** Directory that directly contains claims/. */
   root;
@@ -3598,6 +3631,14 @@ var Store = class _Store {
     this.root = root2;
     this.gitDir = gitDir;
     this.gitPath = gitPath;
+  }
+  /** repo mode keeps state inside the project; central mode keeps it in ~/.continuity. */
+  get mode() {
+    return this.gitPath === "." ? "central" : "repo";
+  }
+  /** Human-readable location, for telling the user which store they are writing to. */
+  get label() {
+    return this.mode === "repo" ? this.gitDir : `central project "${basename(this.root)}"`;
   }
   claimsDir() {
     return join(this.root, CLAIMS);
@@ -3637,8 +3678,10 @@ var Store = class _Store {
    */
   static resolve(opts = {}) {
     if (opts.project) return _Store.forProject(opts.project);
-    const repo = _Store.findRepo(opts.cwd ?? process.cwd());
+    const cwd = opts.cwd ?? process.cwd();
+    const repo = _Store.findRepo(cwd);
     if (repo) return repo;
+    if (isRepo(cwd)) return null;
     const projects = _Store.listProjects();
     if (projects.length === 1) return _Store.forProject(projects[0]);
     return null;
@@ -3673,21 +3716,21 @@ var Store = class _Store {
     mkdirSync(this.claimsDir(), { recursive: true });
     writeFileSync(join(this.claimsDir(), `${c.id}.md`), serializeClaim(c));
   }
-  record(input) {
-    const id = input.id ?? this.nextId(input.type);
+  record(input2) {
+    const id = input2.id ?? this.nextId(input2.type);
     const claim = {
       id,
-      type: input.type,
-      title: input.title,
-      body: input.body ?? "",
-      status: input.status ?? "accepted",
-      confidence: input.confidence ?? "tentative",
-      provenance: { origin: input.origin ?? "manual", session: input.session, created: (/* @__PURE__ */ new Date()).toISOString() },
+      type: input2.type,
+      title: input2.title,
+      body: input2.body ?? "",
+      status: input2.status ?? "accepted",
+      confidence: input2.confidence ?? "tentative",
+      provenance: { origin: input2.origin ?? "manual", session: input2.session, created: (/* @__PURE__ */ new Date()).toISOString() },
       supersedes: [],
       superseded_by: null,
-      depends_on: input.depends_on ?? [],
-      reason: input.reason,
-      conflicts_with: input.conflicts_with,
+      depends_on: input2.depends_on ?? [],
+      reason: input2.reason,
+      conflicts_with: input2.conflicts_with,
       tags: []
     };
     this.write(claim);
@@ -3717,13 +3760,38 @@ var Store = class _Store {
     if (!c) throw new Error(`no such claim: ${id}`);
     return c;
   }
+  /**
+   * Ids are `<prefix><n><suffix>` — e.g. `d16k3`. The sequence number keeps them
+   * readable and roughly ordered; the two-char suffix (always letter-then-alnum,
+   * so it can never be mistaken for part of the number) makes them safe for
+   * concurrent writers.
+   *
+   * Without the suffix, two developers who each record the 16th decision on their
+   * own clone BOTH write `.continuity/claims/d16.md` — the same path — and the
+   * merge fails with an add/add conflict in a file neither of them consciously
+   * wrote. The natural resolution is to keep one side, which silently discards
+   * the other developer's claim and violates the append-only guarantee (d1).
+   * With the suffix they get `d16k3` and `d16m9`: two files, no conflict, both
+   * claims preserved.
+   */
   nextId(type) {
-    const prefix = TYPE_PREFIX[type] ?? type.replace(/[^a-z]/g, "").slice(0, 3);
-    const ids = new Set(this.list().map((c) => c.id));
-    if (type === "mission" && !ids.has("mission")) return "mission";
-    let n = 1;
-    while (ids.has(`${prefix}${n}`)) n++;
-    return `${prefix}${n}`;
+    const prefix = TYPE_PREFIX[type];
+    if (!prefix) throw new Error(`unknown claim type: ${type}`);
+    const ids = this.list().map((c) => c.id);
+    if (type === "mission" && !ids.includes("mission")) return "mission";
+    const seq = new RegExp(`^${prefix}(\\d+)`);
+    let max = 0;
+    for (const id of ids) {
+      const m = seq.exec(id);
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    const n = max + 1;
+    const taken = new Set(ids);
+    for (let i = 0; i < 100; i++) {
+      const id = `${prefix}${n}${randomSuffix()}`;
+      if (!taken.has(id)) return id;
+    }
+    throw new Error(`could not allocate an id for ${type}${n} after 100 attempts`);
   }
 };
 
@@ -3732,7 +3800,7 @@ var LIVE = /* @__PURE__ */ new Set(["active", "accepted", "frozen", "open"]);
 function by(claims2, types, statuses) {
   return claims2.filter((c) => types.includes(c.type) && (!statuses || statuses.has(c.status)));
 }
-function renderResumeContext(claims2) {
+function renderResumeContext(claims2, meta = {}) {
   const L = [];
   const predecessors = (id) => claims2.filter((c) => c.superseded_by === id);
   const mission = by(claims2, ["mission"], LIVE)[0];
@@ -3744,6 +3812,22 @@ function renderResumeContext(claims2) {
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
   if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` \u2014 ${next.body}` : ""}`);
   L.push("");
+  const sync = [];
+  if (meta.mode === "central") {
+    sync.push(
+      "State is in a CENTRAL project (~/.continuity), not in the repo \u2014 it will NOT reach anyone who clones this project. Use repo mode for shared work."
+    );
+  }
+  if (meta.unpushed && meta.unpushed > 0) {
+    sync.push(
+      `${meta.unpushed} captured commit${meta.unpushed === 1 ? "" : "s"} not pushed \u2014 teammates pulling now will see stale state. Push when convenient.`
+    );
+  }
+  if (sync.length) {
+    L.push("## \u26A0\uFE0F STATE SYNC");
+    for (const w of sync) L.push(`- ${w}`);
+    L.push("");
+  }
   const parked = claims2.filter((c) => c.status === "needs_review");
   if (parked.length) {
     L.push("## \u26A0\uFE0F CONFLICTS NEEDING ATTENTION (parked by the reconciler \u2014 resolve, don't act blindly)");
@@ -3807,12 +3891,52 @@ function renderResumeContext(claims2) {
 `;
 }
 
+// src/core/once.ts
+import { existsSync as existsSync2, readFileSync as readFileSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join2 } from "node:path";
+function throttle(kind, sessionId, windowMs) {
+  const marker = join2(tmpdir(), `continuity-${kind}-${sessionId ?? "default"}`);
+  const now = Date.now();
+  try {
+    if (existsSync2(marker)) {
+      const last = Number(readFileSync2(marker, "utf8")) || 0;
+      if (now - last < windowMs) return false;
+    }
+  } catch {
+  }
+  try {
+    writeFileSync2(marker, String(now));
+  } catch {
+  }
+  return true;
+}
+function readHookInput() {
+  return new Promise((resolve) => {
+    let data = "";
+    process.stdin.on("data", (c) => data += c);
+    process.stdin.on("end", () => {
+      try {
+        resolve(JSON.parse(data || "{}"));
+      } catch {
+        resolve({});
+      }
+    });
+    process.stdin.on("error", () => resolve({}));
+  });
+}
+
 // src/hook-session-start.ts
+var input = await readHookInput();
+if (input.session_id && !throttle("start", input.session_id, 5e3)) process.exit(0);
 var root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 var store = Store.resolve({ cwd: root });
 var claims = store?.list() ?? [];
 if (claims.length) {
-  const additionalContext = "Restored project state from the Continuity layer. Treat \u{1F512} FROZEN items and \u{1F6AB} rejected alternatives as authoritative \u2014 do not re-open or re-propose them.\n\n" + renderResumeContext(claims);
+  const additionalContext = "Restored project state from the Continuity layer. Treat \u{1F512} FROZEN items and \u{1F6AB} rejected alternatives as authoritative \u2014 do not re-open or re-propose them.\n\n" + renderResumeContext(
+    claims,
+    store ? { mode: store.mode, unpushed: unpushedCount(store.gitDir, store.gitPath) } : {}
+  );
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {

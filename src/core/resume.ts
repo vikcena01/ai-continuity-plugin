@@ -1,5 +1,16 @@
 import { Claim } from "./claim.js";
 
+/**
+ * Facts about WHERE the state lives. Kept separate from the claims so
+ * renderResumeContext stays a pure function of its inputs (d9).
+ */
+export interface ResumeMeta {
+  /** repo mode ships state with the project; central mode keeps it on one machine. */
+  mode?: "repo" | "central";
+  /** Captured commits not yet on the upstream, or null if there is no upstream. */
+  unpushed?: number | null;
+}
+
 const LIVE = new Set<string>(["active", "accepted", "frozen", "open"]);
 
 function by(claims: Claim[], types: string[], statuses?: Set<string>): Claim[] {
@@ -15,7 +26,7 @@ function by(claims: Claim[], types: string[], statuses?: Set<string>): Claim[] {
  * decision, the reason it replaced an earlier one (so the reversal can't be
  * re-litigated).
  */
-export function renderResumeContext(claims: Claim[]): string {
+export function renderResumeContext(claims: Claim[], meta: ResumeMeta = {}): string {
   const L: string[] = [];
   const predecessors = (id: string) => claims.filter((c) => c.superseded_by === id);
 
@@ -29,6 +40,26 @@ export function renderResumeContext(claims: Claim[]): string {
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
   if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` — ${next.body}` : ""}`);
   L.push("");
+
+  // Only rendered when something is actually wrong — a clean solo repo sees nothing.
+  const sync: string[] = [];
+  if (meta.mode === "central") {
+    sync.push(
+      "State is in a CENTRAL project (~/.continuity), not in the repo — it will NOT " +
+        "reach anyone who clones this project. Use repo mode for shared work.",
+    );
+  }
+  if (meta.unpushed && meta.unpushed > 0) {
+    sync.push(
+      `${meta.unpushed} captured commit${meta.unpushed === 1 ? "" : "s"} not pushed — ` +
+        "teammates pulling now will see stale state. Push when convenient.",
+    );
+  }
+  if (sync.length) {
+    L.push("## ⚠️ STATE SYNC");
+    for (const w of sync) L.push(`- ${w}`);
+    L.push("");
+  }
 
   const parked = claims.filter((c) => c.status === "needs_review");
   if (parked.length) {

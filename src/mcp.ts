@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { Store } from "./core/store.js";
 import { renderResumeContext } from "./core/resume.js";
-import { commit, ensureRepo } from "./core/git.js";
+import { commit, ensureRepo, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
@@ -14,10 +14,17 @@ function resolveStore(project?: string): Store {
   if (!s) {
     const known = Store.listProjects().join(", ") || "none";
     throw new Error(
-      `No project selected. Call create_project, or pass project=<name>. Known projects: ${known}`,
+      "No continuity state here. Inside a project repo, run `continuity init \"<mission>\"` " +
+        "(or ask the user to) so state lives in .continuity/ and ships with the repo. " +
+        `Otherwise call create_project or pass project=<name>. Known central projects: ${known}`,
     );
   }
   return s;
+}
+
+/** Resume context plus the where-does-this-live facts (central-mode + unpushed warnings). */
+function renderFor(s: Store): string {
+  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) });
 }
 
 function save(s: Store, msg: string): void {
@@ -63,7 +70,7 @@ server.tool(
   "resume_context",
   "Return the current project state to resume work: mission, frozen constraints, active decisions (with the reasons they superseded older ones), rejected paths not to re-propose, open questions, and the next step. Call at the start of a session.",
   { ...projectArg },
-  async ({ project }) => text(renderResumeContext(resolveStore(project).list())),
+  async ({ project }) => text(renderFor(resolveStore(project))),
 );
 
 server.tool(
@@ -194,7 +201,7 @@ server.prompt(
           type: "text" as const,
           text:
             "Here is the restored project state. Treat FROZEN items and rejected alternatives as authoritative — do not re-open them. Continue from the next step.\n\n" +
-            renderResumeContext(resolveStore(project).list()),
+            renderFor(resolveStore(project)),
         },
       },
     ],

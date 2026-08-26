@@ -1,19 +1,53 @@
 import matter from "gray-matter";
 
 /** The vocabulary of project knowledge. Each type answers a different question. */
-export type ClaimType =
-  | "mission"
-  | "requirement"
-  | "decision"
-  | "constraint"
-  | "architecture"
-  | "milestone"
-  | "hypothesis"
-  | "experiment"
-  | "risk"
-  | "question"
-  | "next_action"
-  | "rejected_alternative";
+export const CLAIM_TYPES = [
+  "mission",
+  "requirement",
+  "decision",
+  "constraint",
+  "architecture",
+  "milestone",
+  "hypothesis",
+  "experiment",
+  "risk",
+  "question",
+  "next_action",
+  "rejected_alternative",
+] as const;
+
+/** Derived from CLAIM_TYPES so the runtime list and the type can never drift. */
+export type ClaimType = (typeof CLAIM_TYPES)[number];
+
+/**
+ * Near-misses an LLM plausibly emits, mapped to the real type. Everything else is
+ * REJECTED rather than coerced: capture used to accept any string and mint a
+ * fallback id prefix from it (type "open_question" produced ids like `ope1`
+ * instead of `q3`), silently forking the type vocabulary so claims stopped
+ * landing in the right resume sections. Guessing is what caused that; aliasing
+ * only the unambiguous cases keeps the vocabulary closed.
+ */
+const TYPE_ALIASES: Record<string, ClaimType> = {
+  open_question: "question",
+  question_open: "question",
+  open: "question",
+  rejected: "rejected_alternative",
+  rejection: "rejected_alternative",
+  alternative: "rejected_alternative",
+  next: "next_action",
+  action: "next_action",
+  todo: "next_action",
+  arch: "architecture",
+  req: "requirement",
+  invariant: "constraint",
+};
+
+/** Canonical ClaimType for a free-form string, or null if it is not a known type. */
+export function normalizeType(input: string): ClaimType | null {
+  const k = input.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if ((CLAIM_TYPES as readonly string[]).includes(k)) return k as ClaimType;
+  return TYPE_ALIASES[k] ?? null;
+}
 
 /** Where a claim is in its lifecycle. Live statuses surface in the resume context. */
 export type Status =

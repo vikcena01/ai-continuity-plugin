@@ -1,0 +1,27 @@
+{
+  "$comment": "Self-activation (rk3): a plain `git clone` carries .continuity/ but nothing tells Claude Code to read it. These project-scoped hooks run the repo's own committed bundles, so a collaborator gets auto-resume and auto-capture without installing the plugin. Developers who DO have the plugin installed register the same hooks twice; both hooks de-duplicate per session (src/core/once.ts), so the double registration is harmless.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/hook-session-start.js\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/hook-stop-capture.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

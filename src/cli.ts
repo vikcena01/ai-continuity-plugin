@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { Store } from "./core/store.js";
 import { renderResumeContext } from "./core/resume.js";
 import { ClaimType, Claim, Confidence, Status } from "./core/claim.js";
-import { commit, ensureRepo, log as gitLog, revert } from "./core/git.js";
+import { commit, ensureRepo, log as gitLog, revert, unpushedCount } from "./core/git.js";
 import { reconcile, CaptureOp } from "./core/reconcile.js";
 
 function fail(msg: string): never {
@@ -66,7 +66,10 @@ switch (cmd) {
   }
 
   case "resume": {
-    process.stdout.write(renderResumeContext(getStore().list()));
+    {
+      const s = getStore();
+      process.stdout.write(renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) }));
+    }
     break;
   }
 

@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { Claim, ClaimType, Confidence, Provenance, Status, parseClaim, serializeClaim } from "./claim.js";
+import { isRepo } from "./git.js";
 
 const STATE_DIR = ".continuity"; // repo-mode state dir
 const CLAIMS = "claims";
@@ -28,6 +30,16 @@ function projectsHome(): string {
 }
 
 /**
+ * Two random chars, letter first. Letter-first matters: a digit would be absorbed
+ * by the `^prefix(\d+)` sequence parse, so `d1` + "3k" would read back as d13.
+ */
+const SUFFIX_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+function randomSuffix(): string {
+  const b = randomBytes(2);
+  return SUFFIX_ALPHABET[b[0] % 26] + SUFFIX_ALPHABET[b[1] % SUFFIX_ALPHABET.length];
+}
+
+/**
  * The store IS the filesystem. Two modes, one API:
  *  - repo mode:    <repo>/.continuity/   (found by walking up from cwd — Claude Code)
  *  - central mode: ~/.continuity/projects/<name>/   (named projects — Claude Desktop)
@@ -45,6 +57,16 @@ export class Store {
     this.root = root;
     this.gitDir = gitDir;
     this.gitPath = gitPath;
+  }
+
+  /** repo mode keeps state inside the project; central mode keeps it in ~/.continuity. */
+  get mode(): "repo" | "central" {
+    return this.gitPath === "." ? "central" : "repo";
+  }
+
+  /** Human-readable location, for telling the user which store they are writing to. */
+  get label(): string {
+    return this.mode === "repo" ? this.gitDir : `central project "${basename(this.root)}"`;
   }
 
   private claimsDir(): string {
@@ -94,8 +116,14 @@ export class Store {
    */
   static resolve(opts: { project?: string; cwd?: string } = {}): Store | null {
     if (opts.project) return Store.forProject(opts.project);
-    const repo = Store.findRepo(opts.cwd ?? process.cwd());
+    const cwd = opts.cwd ?? process.cwd();
+    const repo = Store.findRepo(cwd);
     if (repo) return repo;
+    // Inside a git work tree with no .continuity/, refuse rather than silently
+    // adopting an unrelated central project: that would write this repo's state
+    // into ~/.continuity, where nobody cloning the repo can ever see it. Better
+    // to make the user run `continuity init` and choose repo mode explicitly.
+    if (isRepo(cwd)) return null;
     const projects = Store.listProjects();
     if (projects.length === 1) return Store.forProject(projects[0]);
     return null;
@@ -201,12 +229,42 @@ export class Store {
     return c;
   }
 
+  /**
+   * Ids are `<prefix><n><suffix>` — e.g. `d16k3`. The sequence number keeps them
+   * readable and roughly ordered; the two-char suffix (always letter-then-alnum,
+   * so it can never be mistaken for part of the number) makes them safe for
+   * concurrent writers.
+   *
+   * Without the suffix, two developers who each record the 16th decision on their
+   * own clone BOTH write `.continuity/claims/d16.md` — the same path — and the
+   * merge fails with an add/add conflict in a file neither of them consciously
+   * wrote. The natural resolution is to keep one side, which silently discards
+   * the other developer's claim and violates the append-only guarantee (d1).
+   * With the suffix they get `d16k3` and `d16m9`: two files, no conflict, both
+   * claims preserved.
+   */
   private nextId(type: ClaimType): string {
-    const prefix = TYPE_PREFIX[type] ?? type.replace(/[^a-z]/g, "").slice(0, 3);
-    const ids = new Set(this.list().map((c) => c.id));
-    if (type === "mission" && !ids.has("mission")) return "mission";
-    let n = 1;
-    while (ids.has(`${prefix}${n}`)) n++;
-    return `${prefix}${n}`;
+    const prefix = TYPE_PREFIX[type];
+    // No silent fallback: an unknown type used to mint a garbage prefix from the
+    // string itself, forking the id space. Callers validate via normalizeType().
+    if (!prefix) throw new Error(`unknown claim type: ${type}`);
+
+    const ids = this.list().map((c) => c.id);
+    if (type === "mission" && !ids.includes("mission")) return "mission";
+
+    const seq = new RegExp(`^${prefix}(\\d+)`);
+    let max = 0;
+    for (const id of ids) {
+      const m = seq.exec(id);
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    const n = max + 1;
+
+    const taken = new Set(ids);
+    for (let i = 0; i < 100; i++) {
+      const id = `${prefix}${n}${randomSuffix()}`;
+      if (!taken.has(id)) return id;
+    }
+    throw new Error(`could not allocate an id for ${type}${n} after 100 attempts`);
   }
 }

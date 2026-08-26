@@ -24641,12 +24641,46 @@ var StdioServerTransport = class {
 };
 
 // src/core/store.ts
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, mkdirSync as mkdirSync2, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 // src/core/claim.ts
 var import_gray_matter = __toESM(require_gray_matter(), 1);
+var CLAIM_TYPES = [
+  "mission",
+  "requirement",
+  "decision",
+  "constraint",
+  "architecture",
+  "milestone",
+  "hypothesis",
+  "experiment",
+  "risk",
+  "question",
+  "next_action",
+  "rejected_alternative"
+];
+var TYPE_ALIASES = {
+  open_question: "question",
+  question_open: "question",
+  open: "question",
+  rejected: "rejected_alternative",
+  rejection: "rejected_alternative",
+  alternative: "rejected_alternative",
+  next: "next_action",
+  action: "next_action",
+  todo: "next_action",
+  arch: "architecture",
+  req: "requirement",
+  invariant: "constraint"
+};
+function normalizeType(input) {
+  const k = input.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (CLAIM_TYPES.includes(k)) return k;
+  return TYPE_ALIASES[k] ?? null;
+}
 function parseClaim(raw) {
   const { data, content } = (0, import_gray_matter.default)(raw);
   return {
@@ -24688,6 +24722,64 @@ ${c.body}
 `, clean);
 }
 
+// src/core/git.ts
+import { execFileSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
+function git(dir, args) {
+  return execFileSync("git", ["-C", dir, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+}
+function isRepo(dir) {
+  try {
+    git(dir, ["rev-parse", "--is-inside-work-tree"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function ensureRepo(dir) {
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+  }
+  if (!isRepo(dir)) {
+    try {
+      git(dir, ["init", "-q"]);
+    } catch {
+    }
+  }
+}
+function commit(dir, addPath, message) {
+  try {
+    git(dir, ["add", "--", addPath]);
+    git(dir, [
+      "-c",
+      "user.email=continuity@local",
+      "-c",
+      "user.name=continuity",
+      "commit",
+      "-q",
+      "-m",
+      message,
+      "--",
+      addPath
+    ]);
+  } catch {
+  }
+}
+function unpushedCount(dir, addPath) {
+  try {
+    git(dir, ["rev-parse", "--abbrev-ref", "@{u}"]);
+  } catch {
+    return null;
+  }
+  try {
+    const n = Number(git(dir, ["rev-list", "--count", "@{u}..HEAD", "--", addPath]).trim());
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 // src/core/store.ts
 var STATE_DIR = ".continuity";
 var CLAIMS = "claims";
@@ -24708,6 +24800,11 @@ var TYPE_PREFIX = {
 function projectsHome() {
   return process.env.CONTINUITY_HOME || join(homedir(), ".continuity", "projects");
 }
+var SUFFIX_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+function randomSuffix() {
+  const b = randomBytes(2);
+  return SUFFIX_ALPHABET[b[0] % 26] + SUFFIX_ALPHABET[b[1] % SUFFIX_ALPHABET.length];
+}
 var Store = class _Store {
   /** Directory that directly contains claims/. */
   root;
@@ -24719,6 +24816,14 @@ var Store = class _Store {
     this.root = root;
     this.gitDir = gitDir;
     this.gitPath = gitPath;
+  }
+  /** repo mode keeps state inside the project; central mode keeps it in ~/.continuity. */
+  get mode() {
+    return this.gitPath === "." ? "central" : "repo";
+  }
+  /** Human-readable location, for telling the user which store they are writing to. */
+  get label() {
+    return this.mode === "repo" ? this.gitDir : `central project "${basename(this.root)}"`;
   }
   claimsDir() {
     return join(this.root, CLAIMS);
@@ -24758,8 +24863,10 @@ var Store = class _Store {
    */
   static resolve(opts = {}) {
     if (opts.project) return _Store.forProject(opts.project);
-    const repo = _Store.findRepo(opts.cwd ?? process.cwd());
+    const cwd = opts.cwd ?? process.cwd();
+    const repo = _Store.findRepo(cwd);
     if (repo) return repo;
+    if (isRepo(cwd)) return null;
     const projects = _Store.listProjects();
     if (projects.length === 1) return _Store.forProject(projects[0]);
     return null;
@@ -24787,11 +24894,11 @@ var Store = class _Store {
   }
   // ---- writes ------------------------------------------------------
   init(mission) {
-    mkdirSync(this.claimsDir(), { recursive: true });
+    mkdirSync2(this.claimsDir(), { recursive: true });
     if (mission) this.record({ type: "mission", title: mission, status: "active", confidence: "confirmed" });
   }
   write(c) {
-    mkdirSync(this.claimsDir(), { recursive: true });
+    mkdirSync2(this.claimsDir(), { recursive: true });
     writeFileSync(join(this.claimsDir(), `${c.id}.md`), serializeClaim(c));
   }
   record(input) {
@@ -24838,13 +24945,38 @@ var Store = class _Store {
     if (!c) throw new Error(`no such claim: ${id}`);
     return c;
   }
+  /**
+   * Ids are `<prefix><n><suffix>` — e.g. `d16k3`. The sequence number keeps them
+   * readable and roughly ordered; the two-char suffix (always letter-then-alnum,
+   * so it can never be mistaken for part of the number) makes them safe for
+   * concurrent writers.
+   *
+   * Without the suffix, two developers who each record the 16th decision on their
+   * own clone BOTH write `.continuity/claims/d16.md` — the same path — and the
+   * merge fails with an add/add conflict in a file neither of them consciously
+   * wrote. The natural resolution is to keep one side, which silently discards
+   * the other developer's claim and violates the append-only guarantee (d1).
+   * With the suffix they get `d16k3` and `d16m9`: two files, no conflict, both
+   * claims preserved.
+   */
   nextId(type) {
-    const prefix = TYPE_PREFIX[type] ?? type.replace(/[^a-z]/g, "").slice(0, 3);
-    const ids = new Set(this.list().map((c) => c.id));
-    if (type === "mission" && !ids.has("mission")) return "mission";
-    let n = 1;
-    while (ids.has(`${prefix}${n}`)) n++;
-    return `${prefix}${n}`;
+    const prefix = TYPE_PREFIX[type];
+    if (!prefix) throw new Error(`unknown claim type: ${type}`);
+    const ids = this.list().map((c) => c.id);
+    if (type === "mission" && !ids.includes("mission")) return "mission";
+    const seq = new RegExp(`^${prefix}(\\d+)`);
+    let max = 0;
+    for (const id of ids) {
+      const m = seq.exec(id);
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    const n = max + 1;
+    const taken = new Set(ids);
+    for (let i = 0; i < 100; i++) {
+      const id = `${prefix}${n}${randomSuffix()}`;
+      if (!taken.has(id)) return id;
+    }
+    throw new Error(`could not allocate an id for ${type}${n} after 100 attempts`);
   }
 };
 
@@ -24853,7 +24985,7 @@ var LIVE = /* @__PURE__ */ new Set(["active", "accepted", "frozen", "open"]);
 function by(claims, types, statuses) {
   return claims.filter((c) => types.includes(c.type) && (!statuses || statuses.has(c.status)));
 }
-function renderResumeContext(claims) {
+function renderResumeContext(claims, meta = {}) {
   const L = [];
   const predecessors = (id) => claims.filter((c) => c.superseded_by === id);
   const mission = by(claims, ["mission"], LIVE)[0];
@@ -24865,6 +24997,22 @@ function renderResumeContext(claims) {
   if (milestone) L.push(`**Current milestone:** ${milestone.title}`);
   if (next) L.push(`**Resume at:** ${next.title}${next.body ? ` \u2014 ${next.body}` : ""}`);
   L.push("");
+  const sync = [];
+  if (meta.mode === "central") {
+    sync.push(
+      "State is in a CENTRAL project (~/.continuity), not in the repo \u2014 it will NOT reach anyone who clones this project. Use repo mode for shared work."
+    );
+  }
+  if (meta.unpushed && meta.unpushed > 0) {
+    sync.push(
+      `${meta.unpushed} captured commit${meta.unpushed === 1 ? "" : "s"} not pushed \u2014 teammates pulling now will see stale state. Push when convenient.`
+    );
+  }
+  if (sync.length) {
+    L.push("## \u26A0\uFE0F STATE SYNC");
+    for (const w of sync) L.push(`- ${w}`);
+    L.push("");
+  }
   const parked = claims.filter((c) => c.status === "needs_review");
   if (parked.length) {
     L.push("## \u26A0\uFE0F CONFLICTS NEEDING ATTENTION (parked by the reconciler \u2014 resolve, don't act blindly)");
@@ -24928,54 +25076,18 @@ function renderResumeContext(claims) {
 `;
 }
 
-// src/core/git.ts
-import { execFileSync } from "node:child_process";
-import { mkdirSync as mkdirSync2 } from "node:fs";
-function git(dir, args) {
-  return execFileSync("git", ["-C", dir, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-}
-function isRepo(dir) {
-  try {
-    git(dir, ["rev-parse", "--is-inside-work-tree"]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function ensureRepo(dir) {
-  try {
-    mkdirSync2(dir, { recursive: true });
-  } catch {
-  }
-  if (!isRepo(dir)) {
-    try {
-      git(dir, ["init", "-q"]);
-    } catch {
-    }
-  }
-}
-function commit(dir, addPath, message) {
-  try {
-    git(dir, ["add", "--", addPath]);
-    git(dir, [
-      "-c",
-      "user.email=continuity@local",
-      "-c",
-      "user.name=continuity",
-      "commit",
-      "-q",
-      "-m",
-      message,
-      "--",
-      addPath
-    ]);
-  } catch {
-  }
-}
-
 // src/core/reconcile.ts
 var LIVE2 = /* @__PURE__ */ new Set(["active", "accepted", "frozen", "open"]);
 var norm = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function resolveType(raw, fallback, title, res) {
+  if (!raw) return fallback;
+  const t = normalizeType(raw);
+  if (!t) {
+    res.notes.push(`skipped "${title}": unknown type "${raw}" \u2014 valid types: ${CLAIM_TYPES.join(", ")}`);
+    return null;
+  }
+  return t;
+}
 function findOne(store, q) {
   const m = store.resolveClaims(q);
   return m.length === 1 ? m[0] : void 0;
@@ -24985,6 +25097,8 @@ function reconcile(store, ops) {
   for (const op of ops) {
     const live = store.list().filter((c) => LIVE2.has(c.status));
     if (op.op === "add" || op.op === "reject") {
+      const type = op.op === "reject" ? "rejected_alternative" : resolveType(op.type, "decision", op.title, res);
+      if (!type) continue;
       const dup = live.find((c2) => norm(c2.title) === norm(op.title));
       if (dup) {
         res.duplicates.push(`${dup.id} ("${op.title}")`);
@@ -24994,7 +25108,7 @@ function reconcile(store, ops) {
         const target = findOne(store, op.conflicts_with);
         if (target && target.status === "frozen") {
           const c2 = store.record({
-            type: op.op === "reject" ? "rejected_alternative" : op.type ?? "decision",
+            type,
             title: op.title,
             body: op.body,
             reason: op.reason,
@@ -25008,7 +25122,7 @@ function reconcile(store, ops) {
         }
       }
       const c = store.record({
-        type: op.op === "reject" ? "rejected_alternative" : op.type ?? "decision",
+        type,
         title: op.title,
         body: op.body,
         reason: op.reason,
@@ -25025,9 +25139,11 @@ function reconcile(store, ops) {
         res.notes.push(`supersede skipped: could not uniquely resolve "${op.old}"`);
         continue;
       }
+      const type = resolveType(op.type, old.type, op.title, res);
+      if (!type) continue;
       if (old.status === "frozen") {
         const c = store.record({
-          type: op.type ?? old.type,
+          type,
           title: op.title,
           body: op.body,
           reason: op.reason,
@@ -25040,7 +25156,7 @@ function reconcile(store, ops) {
         continue;
       }
       const fresh = store.record({
-        type: op.type ?? old.type,
+        type,
         title: op.title,
         body: op.body,
         status: "accepted",
@@ -25063,10 +25179,13 @@ function resolveStore(project) {
   if (!s) {
     const known = Store.listProjects().join(", ") || "none";
     throw new Error(
-      `No project selected. Call create_project, or pass project=<name>. Known projects: ${known}`
+      `No continuity state here. Inside a project repo, run \`continuity init "<mission>"\` (or ask the user to) so state lives in .continuity/ and ships with the repo. Otherwise call create_project or pass project=<name>. Known central projects: ${known}`
     );
   }
   return s;
+}
+function renderFor(s) {
+  return renderResumeContext(s.list(), { mode: s.mode, unpushed: unpushedCount(s.gitDir, s.gitPath) });
 }
 function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
@@ -25100,7 +25219,7 @@ server.tool(
   "resume_context",
   "Return the current project state to resume work: mission, frozen constraints, active decisions (with the reasons they superseded older ones), rejected paths not to re-propose, open questions, and the next step. Call at the start of a session.",
   { ...projectArg },
-  async ({ project }) => text(renderResumeContext(resolveStore(project).list()))
+  async ({ project }) => text(renderFor(resolveStore(project)))
 );
 server.tool(
   "record_decision",
@@ -25218,7 +25337,7 @@ server.prompt(
         role: "user",
         content: {
           type: "text",
-          text: "Here is the restored project state. Treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open them. Continue from the next step.\n\n" + renderResumeContext(resolveStore(project).list())
+          text: "Here is the restored project state. Treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open them. Continue from the next step.\n\n" + renderFor(resolveStore(project))
         }
       }
     ]

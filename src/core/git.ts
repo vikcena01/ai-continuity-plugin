@@ -46,6 +46,30 @@ export function commit(dir: string, addPath: string, message: string): void {
   }
 }
 
+/**
+ * Commits touching `addPath` that exist locally but not on the tracked upstream.
+ * Returns null when there is no upstream at all — nothing to warn about, and a
+ * solo repo should never be nagged. Best-effort like everything else here.
+ *
+ * This exists because capture COMMITS but deliberately never pushes: pushing is
+ * an outbound action nobody asked for. The cost is that autonomously-written
+ * commits can sit unpushed while a teammate pulls stale state, so resume shows
+ * the count instead.
+ */
+export function unpushedCount(dir: string, addPath: string): number | null {
+  try {
+    git(dir, ["rev-parse", "--abbrev-ref", "@{u}"]);
+  } catch {
+    return null; // no upstream configured
+  }
+  try {
+    const n = Number(git(dir, ["rev-list", "--count", "@{u}..HEAD", "--", addPath]).trim());
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 export function log(dir: string, addPath: string, n = 20): string {
   try {
     return git(dir, ["log", `-n${n}`, "--oneline", "--", addPath]).trimEnd();

@@ -12,7 +12,7 @@
     "build": "npm run typecheck && npm run bundle",
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/mcp.ts",
-    "test": "npm run build && bash test/smoke.sh && bash test/reconcile.sh"
+    "test": "npm run build && bash test/smoke.sh && bash test/reconcile.sh && bash test/risks.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.4.0",
