@@ -4,15 +4,21 @@ type: decision
 title: >-
   History was rewritten before the first push — every commit hash predating
   b27cb64 is invalid
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T05:50:08.023Z'
 supersedes: []
-superseded_by: null
+superseded_by: d27c9
 depends_on: []
 tags: []
+superseded_reason: >-
+  The superseded version captured the refs/original pitfall but missed a second
+  failure that only surfaced later: the rewrite silently corrupted a claim body
+  that was DISCUSSING the purged string, leaving it asserting the opposite of
+  the truth. Anyone doing this again needs both lessons in the claim they will
+  actually read.
 reason: >-
   The old work email sat in the CONTENT of 3 commits; changing the manifests
   would not have removed it from a public `git log -p`, and pre-push was the
