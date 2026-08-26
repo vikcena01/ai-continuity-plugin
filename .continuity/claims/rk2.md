@@ -31,7 +31,7 @@ violates the append-only guarantee in d1.
 nextId (src/core/store.ts) allocated ids by scanning only the LOCAL claims directory,
 so two people each recording the Nth decision both landed on dN.
 
-FIXED in 0dd389b: ids are now `<prefix><n><2-char suffix>`, e.g. d16k3. The sequence
+FIXED in 09f1a88: ids are now `<prefix><n><2-char suffix>`, e.g. d16k3. The sequence
 number keeps them readable and ordered; the suffix is letter-first so it can never be
 absorbed by the `^prefix(\d+)` parse. Two concurrent writers get d16k3 and d16m9 — two
 files, clean merge, both claims preserved. Collision now needs the same sequence number
