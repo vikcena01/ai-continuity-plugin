@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # typecheck + bundle + all six suites
+      - run: npm test
+
+      # dist/ is committed so the plugin installs with no build step (d13), which
+      # means a reviewer reads src/ while users RUN dist/. This step proves the two
+      # agree: rebuild from source and fail if the committed bundle differs. It is
+      # the only thing standing between committed dist/ and an unreviewable
+      # supply-chain surface (rk11g9).
+      - name: committed dist/ matches src/
+        run: |
+          npm run bundle
+          if ! git diff --quiet -- dist; then
+            echo "::error::dist/ does not match src/. Run 'npm run build' and commit the result."
+            git --no-pager diff --stat -- dist
+            exit 1
+          fi
+          echo "dist/ is reproducible from src/"
