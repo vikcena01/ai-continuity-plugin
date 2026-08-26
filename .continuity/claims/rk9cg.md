@@ -20,6 +20,6 @@ reason: >-
   the plugin.
 ---
 
-Introduced knowingly in 9daf448 alongside the other badges. The count is accurate today (13 smoke + 9 reconcile + 26 risks + 21 resolve = 69) and there is no mechanism keeping it that way.
+Introduced knowingly in 5ea51d0 alongside the other badges. The count is accurate today (13 smoke + 9 reconcile + 26 risks + 21 resolve = 69) and there is no mechanism keeping it that way.
 
 Two ways out: add a GitHub Actions workflow running `npm test` on push and switch to a real github/actions/workflow/status badge, which also gives outside contributors a signal the suite passes; or delete the badge. Prefer the workflow — the repo is public now and has no CI at all, so nothing currently catches a regression pushed from another machine. The other static badges (Claude Code plugin, MCP server, dependencies zero) are architectural facts that only change if the architecture does, so they carry no equivalent risk.

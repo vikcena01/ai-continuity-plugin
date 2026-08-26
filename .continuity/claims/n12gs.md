@@ -21,7 +21,7 @@ superseded_reason: >-
   next_action did not capture it.
 ---
 
-Shipped state: remote main and remote tag v1.0.0 both at 765fe1d, all 77 commits authored Vikash Singh <vikcena01@gmail.com>, zero continuity@local in history, dist/ verified in sync, 69 assertions green.
+Shipped state: remote main and remote tag v1.0.0 both at f346a0d, all 77 commits authored Vikash Singh <vikcena01@gmail.com>, zero continuity@local in history, dist/ verified in sync, 69 assertions green.
 
 Remaining:
   1. Start a FRESH session — the MCP server in the session that did this work still runs a pre-fix bundle, so resolve_claim is not exposed and captures there produced ids without collision-safe suffixes.

@@ -20,7 +20,7 @@ reason: >-
   mid-session is stale within a turn or two, and unlike a normal repo nobody has
   to run `git commit` for that drift to happen.
 resolution: >-
-  Fixed: v1.0.0 re-tagged at the final main (765fe1d) and force-pushed, so
+  Fixed: v1.0.0 re-tagged at the final main (f346a0d) and force-pushed, so
   remote tag and remote main are the same commit — 0 commits and 0 diff lines
   between them, and assets/ is now present at the tag. The release rule this
   risk proposed (cut the tag last, verify with git diff --stat <tag>..main)

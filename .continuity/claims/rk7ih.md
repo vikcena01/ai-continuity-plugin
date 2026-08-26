@@ -20,7 +20,7 @@ reason: >-
   positioning is the difference between being found and being lost in that
   group.
 resolution: >-
-  Mitigated in c11e818: the marketplace.json description now opens on 'Not a
+  Mitigated in 1aba654: the marketplace.json description now opens on 'Not a
   memory tool' and leads with the deterministic read path (d9), the reconciler
   parking conflicts rather than applying them (d14), and supersessions carrying
   their reason (d10) — instead of describing what it stores, which is what the
