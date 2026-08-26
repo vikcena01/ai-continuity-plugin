@@ -32,13 +32,33 @@ export function ensureRepo(dir: string): void {
   }
 }
 
-/** Commit a path. Identity is forced inline so it works with no global git config. */
+/**
+ * The identity to commit under: git's own, when the user has configured one.
+ *
+ * The fallback exists so capture still works in a repo with no git identity at
+ * all. It used to be applied UNCONDITIONALLY, which meant every autonomously
+ * written commit was authored `continuity <continuity@local>` — an address tied
+ * to no account, so on a public repo none of those commits attribute to their
+ * author and the contributor graph reads as empty. Overriding a configured
+ * identity was never the intent; falling back was.
+ */
+function identity(dir: string): string[] {
+  try {
+    const email = git(dir, ["config", "user.email"]).trim();
+    const name = git(dir, ["config", "user.name"]).trim();
+    if (email && name) return []; // configured — let git use it
+  } catch {
+    /* nothing configured — fall through to the placeholder */
+  }
+  return ["-c", "user.email=continuity@local", "-c", "user.name=continuity"];
+}
+
+/** Commit a path, under the repo's own identity where one is configured. */
 export function commit(dir: string, addPath: string, message: string): void {
   try {
     git(dir, ["add", "--", addPath]);
     git(dir, [
-      "-c", "user.email=continuity@local",
-      "-c", "user.name=continuity",
+      ...identity(dir),
       "commit", "-q", "-m", message, "--", addPath,
     ]);
   } catch {
@@ -79,5 +99,5 @@ export function log(dir: string, addPath: string, n = 20): string {
 }
 
 export function revert(dir: string, ref: string): void {
-  git(dir, ["-c", "user.email=continuity@local", "-c", "user.name=continuity", "revert", "--no-edit", ref]);
+  git(dir, [...identity(dir), "revert", "--no-edit", ref]);
 }

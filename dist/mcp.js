@@ -7090,7 +7090,7 @@ var require_section_matter = __commonJS({
         options2 = { parse: options2 };
       }
       var file = toObject(input);
-      var defaults = { section_delimiter: "---", parse: identity };
+      var defaults = { section_delimiter: "---", parse: identity2 };
       var opts = extend2({}, defaults, options2);
       var delim = opts.section_delimiter;
       var lines = file.content.split(/\r?\n/);
@@ -7174,7 +7174,7 @@ var require_section_matter = __commonJS({
     function createSection() {
       return { key: "", data: "", content: "" };
     }
-    function identity(val) {
+    function identity2(val) {
       return val;
     }
     function isBuffer(val) {
@@ -24765,14 +24765,20 @@ function ensureRepo(dir) {
     }
   }
 }
+function identity(dir) {
+  try {
+    const email2 = git(dir, ["config", "user.email"]).trim();
+    const name = git(dir, ["config", "user.name"]).trim();
+    if (email2 && name) return [];
+  } catch {
+  }
+  return ["-c", "user.email=continuity@local", "-c", "user.name=continuity"];
+}
 function commit(dir, addPath, message) {
   try {
     git(dir, ["add", "--", addPath]);
     git(dir, [
-      "-c",
-      "user.email=continuity@local",
-      "-c",
-      "user.name=continuity",
+      ...identity(dir),
       "commit",
       "-q",
       "-m",

@@ -205,7 +205,7 @@ var require_section_matter = __commonJS({
         options2 = { parse: options2 };
       }
       var file = toObject(input);
-      var defaults = { section_delimiter: "---", parse: identity };
+      var defaults = { section_delimiter: "---", parse: identity2 };
       var opts = extend({}, defaults, options2);
       var delim = opts.section_delimiter;
       var lines = file.content.split(/\r?\n/);
@@ -289,7 +289,7 @@ var require_section_matter = __commonJS({
     function createSection() {
       return { key: "", data: "", content: "" };
     }
-    function identity(val) {
+    function identity2(val) {
       return val;
     }
     function isBuffer(val) {
@@ -3648,14 +3648,20 @@ function ensureRepo(dir) {
     }
   }
 }
+function identity(dir) {
+  try {
+    const email = git(dir, ["config", "user.email"]).trim();
+    const name = git(dir, ["config", "user.name"]).trim();
+    if (email && name) return [];
+  } catch {
+  }
+  return ["-c", "user.email=continuity@local", "-c", "user.name=continuity"];
+}
 function commit(dir, addPath, message) {
   try {
     git(dir, ["add", "--", addPath]);
     git(dir, [
-      "-c",
-      "user.email=continuity@local",
-      "-c",
-      "user.name=continuity",
+      ...identity(dir),
       "commit",
       "-q",
       "-m",
@@ -3687,7 +3693,7 @@ function log(dir, addPath, n = 20) {
   }
 }
 function revert(dir, ref) {
-  git(dir, ["-c", "user.email=continuity@local", "-c", "user.name=continuity", "revert", "--no-edit", ref]);
+  git(dir, [...identity(dir), "revert", "--no-edit", ref]);
 }
 
 // src/core/store.ts
