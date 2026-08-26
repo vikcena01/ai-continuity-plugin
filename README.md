@@ -1,6 +1,13 @@
-# Continuity
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo-light.svg" alt="Continuity" width="320">
+  </picture>
+</p>
 
-Portable, git-backed **project-state** for long-running AI work. Resume any AI session — in Claude Code, Cursor, or anything that speaks MCP — without re-explaining your decisions, constraints, and direction.
+<p align="center"><em>Resume any AI session without losing your decisions, constraints, or direction.</em></p>
+
+Portable, git-backed **project-state** for long-running AI work — in Claude Code, Cursor, or anything that speaks MCP.
 
 It is **not a memory tool.** A memory tool answers *"what did we talk about?"* Continuity answers a different question: *"what is true about this project **now**, and what must not be touched?"*
 
@@ -122,6 +129,14 @@ Working today:
 - **A `resolve` verb** to close what the reconciler parks, and to close risks/questions once they are settled.
 
 Known limits, tracked as claims in this repo's own `.continuity/`: the Stop-hook capture check is throttled to at most once per 10s, so a decision settled in a very fast exchange can still be missed (`q3`); and reliable status extraction from messy sessions remains the open technical risk (`q2`).
+
+## The mark
+
+<img src="assets/mark.svg" alt="" width="52" align="left" hspace="14" vspace="4">
+
+A git graph, because that is literally what the state is. The solid vertical line is the append-only timeline of accepted claims; the muted branch is a superseded one — archived off to the side, never deleted, still reachable through `why`. Two colours, one idea: what is current, and what it replaced.
+
+<br clear="left">
 
 ## License
 
