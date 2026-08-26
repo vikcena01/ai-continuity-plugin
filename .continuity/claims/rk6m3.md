@@ -4,11 +4,12 @@ type: risk
 title: >-
   The published v1.0.0 tag is stale and the version is ambiguous — autonomous
   capture keeps committing after a tag is cut
-status: open
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T06:25:10.058Z'
+  updated: '2026-08-26T06:46:05.530Z'
 supersedes: []
 superseded_by: null
 depends_on: []
@@ -18,6 +19,12 @@ reason: >-
   Stop hook writes a capture commit at the end of most turns: any tag cut
   mid-session is stale within a turn or two, and unlike a normal repo nobody has
   to run `git commit` for that drift to happen.
+resolution: >-
+  Fixed: v1.0.0 re-tagged at the final main (765fe1d) and force-pushed, so
+  remote tag and remote main are the same commit — 0 commits and 0 diff lines
+  between them, and assets/ is now present at the tag. The release rule this
+  risk proposed (cut the tag last, verify with git diff --stat <tag>..main)
+  stands as guidance for the next release.
 ---
 
 Found 2026-08-26, after the push. Tag v1.0.0 -> 0e560a5 predates the entire logo effort: assets/ does not exist at the tag, so there is no mark, no icon, no lockups, and the README there has no hero image. Fourteen commits landed on main afterwards, including the monogram redesign and the q6f8 corruption fix.
