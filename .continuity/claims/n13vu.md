@@ -4,16 +4,21 @@ type: next_action
 title: >-
   Settle the manifest wording, then submit to claude-community via the Console
   form
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T06:52:18.545Z'
 supersedes:
   - n12gs
-superseded_by: null
+superseded_by: n14i4
 depends_on: []
 tags: []
+superseded_reason: >-
+  The user submitted on 2026-08-26, so the remaining work is waiting and
+  verification rather than preparation; and the pin mechanics turn out to be
+  less restrictive than the previous next_action implied, which changes what can
+  still be changed.
 ---
 
 Do first, while rewriting is still free:
