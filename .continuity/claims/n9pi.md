@@ -4,16 +4,20 @@ type: next_action
 title: >-
   Push is BLOCKED on credentials, not on any decision — authenticate as
   vikcena01, then push
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T06:17:49.496Z'
 supersedes:
   - n8h1
-superseded_by: null
+superseded_by: n10ra
 depends_on: []
 tags: []
+superseded_reason: >-
+  The push it described is done — v1.0.0 is public — so the blocking credential
+  problem it recorded is resolved and the open work is now post-launch
+  verification.
 ---
 
 Everything is approved and ready. `main` is at 1cb54cf, tag v1.0.0, tree clean, 69 assertions green, dist/ verified in sync, and origin still shows 0 refs — nothing has been published.
