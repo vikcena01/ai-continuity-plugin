@@ -20,7 +20,7 @@ reason: >-
   to run `git commit` for that drift to happen.
 ---
 
-Found 2026-08-26, after the push. Tag v1.0.0 -> 4d52d55 predates the entire logo effort: assets/ does not exist at the tag, so there is no mark, no icon, no lockups, and the README there has no hero image. Fourteen commits landed on main afterwards, including the monogram redesign and the q6f8 corruption fix.
+Found 2026-08-26, after the push. Tag v1.0.0 -> 0e560a5 predates the entire logo effort: assets/ does not exist at the tag, so there is no mark, no icon, no lockups, and the README there has no hero image. Fourteen commits landed on main afterwards, including the monogram redesign and the q6f8 corruption fix.
 
 The sharper half of the defect: package.json declares "version": "1.0.0" at BOTH the tag and on main, so two different trees claim the same version and anyone pinning the tag gets an unbranded, pre-fix build.
 

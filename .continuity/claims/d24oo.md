@@ -3,7 +3,7 @@ id: d24oo
 type: decision
 title: >-
   History was rewritten before the first push — every commit hash predating
-  b27cb64 is invalid
+  9763c25 is invalid
 status: superseded
 confidence: confirmed
 provenance:
