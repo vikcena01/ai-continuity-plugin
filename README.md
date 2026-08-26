@@ -15,10 +15,10 @@ See [`DESIGN.md`](DESIGN.md) for the full architecture and [`poc/`](poc/) for th
 
 ## Install (as a Claude plugin)
 
-Continuity is a Claude Code plugin, distributed through a plugin marketplace — same as any plugin on [claude.com/plugins](https://claude.com/plugins). It runs everywhere Claude Code runs: the **terminal, the desktop app, and web**. In Claude Code:
+Continuity is a Claude Code plugin, distributed as its own plugin marketplace — this repo is the marketplace. It runs everywhere Claude Code runs: the **terminal, the desktop app, and web**. In Claude Code:
 
 ```
-/plugin marketplace add vikash/ai-continuity-layer
+/plugin marketplace add vikcena01/ai-continuity-plugin
 /plugin install continuity@continuity-marketplace
 ```
 
@@ -70,7 +70,7 @@ Any host that speaks MCP but has no project cwd can use the **MCP server** with 
   "mcpServers": {
     "continuity": {
       "command": "node",
-      "args": ["/absolute/path/to/ai-continuity-layer/dist/mcp.js"],
+      "args": ["/absolute/path/to/ai-continuity-plugin/dist/mcp.js"],
       "env": { "CONTINUITY_HOME": "/Users/you/.continuity/projects" }
     }
   }

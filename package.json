@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Portable, git-backed project-state for long-running AI work. Resume any AI session without losing decisions, constraints, or direction.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vikcena01/ai-continuity-plugin.git"
+  },
+  "homepage": "https://github.com/vikcena01/ai-continuity-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/vikcena01/ai-continuity-plugin/issues"
+  },
   "type": "module",
   "bin": {
     "continuity": "dist/cli.js"
