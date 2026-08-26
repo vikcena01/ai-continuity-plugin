@@ -3,15 +3,28 @@ schema: 1
 id: x8ge
 type: rejected_alternative
 title: Submitting to the OpenAI plugin directory in the current architecture
-status: rejected
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T08:27:55.008Z'
 supersedes: []
-superseded_by: null
+superseded_by: x9nq
 depends_on: []
 tags: []
+superseded_reason: >-
+  Rejected on architecture AND on cost. Their submission requires a production
+  MCP server URL publicly reachable over HTTPS plus a domain-verification token
+  at /.well-known/openai-apps-challenge; this plugin's server is local stdio by
+  design (d5 local-first, d6 state in the user's repo or ~/.continuity), so
+  there is nothing for a remote service to reach. On top of that the platform
+  gates the flow behind a PAYMENT METHOD AND PURCHASED CREDITS and a verified
+  individual-or-business publisher identity — so proceeding today means paying
+  to reach a form that cannot be completed. Their quality bar additionally
+  requires functionality not natively supported by the assistant's own
+  conversational capabilities, which a hosted version would have to argue
+  against a first-party memory feature. Revisit only once the hosted tier x1
+  deferred actually exists; the full step list is kept in the body for that day.
 reason: >-
   Their submission requires a PRODUCTION MCP SERVER URL THAT IS PUBLICLY
   REACHABLE OVER HTTPS, plus a domain-verification token served at
