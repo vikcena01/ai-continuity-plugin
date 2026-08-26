@@ -8,13 +8,15 @@
 <p align="center"><em>Resume any AI session without losing your decisions, constraints, or direction.</em></p>
 
 <p align="center">
-  <a href="https://github.com/vikcena01/ai-continuity-plugin/releases"><img alt="version" src="https://img.shields.io/github/v/tag/vikcena01/ai-continuity-plugin?label=version&color=6366F1"></a>
-  <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/vikcena01/ai-continuity-plugin?color=6366F1"></a>
-  <img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-8B5CF6">
-  <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-8B5CF6">
-  <img alt="tests" src="https://img.shields.io/badge/tests-69%20passing-3FB950">
-  <img alt="dependencies" src="https://img.shields.io/badge/dependencies-zero-3FB950">
+  <a href="https://github.com/vikcena01/ai-continuity-plugin/releases"><img src="https://img.shields.io/github/v/tag/vikcena01/ai-continuity-plugin?label=version&color=6366f1" alt="Version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/vikcena01/ai-continuity-plugin?color=6366f1" alt="License"></a>
+  <a href="#install-as-a-claude-plugin"><img src="https://img.shields.io/badge/Claude%20Code-plugin-8b5cf6" alt="Claude Code plugin"></a>
+  <a href="#use-it-in-claude-desktop-mcp"><img src="https://img.shields.io/badge/MCP-server-8b5cf6" alt="MCP server"></a>
+  <a href="test/"><img src="https://img.shields.io/badge/tests-69%20passing-3fb950" alt="Tests"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/dependencies-zero-3fb950" alt="Zero dependencies"></a>
 </p>
+
+---
 
 Portable, git-backed **project-state** for long-running AI work — in Claude Code, Cursor, or anything that speaks MCP.
 
