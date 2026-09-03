@@ -5,16 +5,21 @@ type: risk
 title: >-
   Capture Audit v0: recall fails on framing, authority is misclassified, and a
   quarter of the corpus is direction churn
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T07:31:03.000Z'
 supersedes:
   - rk15ac
-superseded_by: null
+superseded_by: rk17sk
 depends_on: []
 tags: []
+superseded_reason: >-
+  Two of the three audit findings are now fixed in v1.2.0 and the missed
+  instance has been recovered, so the original risk overstates what is still
+  wrong; what remains is that the framing fix is an instruction change with no
+  evidence behind it yet.
 ---
 
 Audited 26 user turns from the build session plus 63 from this one, against 119 claims.
