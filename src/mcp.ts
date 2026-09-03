@@ -35,7 +35,7 @@ function save(s: Store, msg: string): void {
 }
 
 const server = new McpServer(
-  { name: "continuity", version: "1.1.0" },
+  { name: "continuity", version: "1.1.1" },
   {
     instructions:
       "Continuity maintains durable, versioned project state across sessions. " +
@@ -52,17 +52,36 @@ const server = new McpServer(
 
 const projectArg = { project: z.string().optional().describe("Named project (central store). Omit inside a Claude Code repo.") };
 
-server.tool(
+server.registerTool(
   "list_projects",
-  "List the named continuity projects available in the central store.",
-  {},
+  {
+    title: "List projects",
+    description:
+      "List the named projects in the central store (~/.continuity/projects). Read-only; writes nothing. Use it " +
+      "when the user names a project you have not seen, or to check whether central mode holds any state at " +
+      "all. Inside a repo that has .continuity/ this is usually irrelevant — that state is found from the " +
+      "working directory.",
+    inputSchema: {},
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  },
   async () => text(Store.listProjects().join("\n") || "(no projects yet — call create_project)"),
 );
 
-server.tool(
+server.registerTool(
   "create_project",
-  "Create a new named project (or initialize an existing name) with an optional mission statement.",
-  { name: z.string(), mission: z.string().optional() },
+  {
+    title: "Create project",
+    description:
+      "Create or initialize a named project in the central store. Creates a directory and an initial git " +
+      "commit. Safe to call on a name that already exists: existing claims are left untouched, so it is " +
+      "effectively idempotent. For central mode only — hosts with no project directory. Inside a git repo, " +
+      "state belongs in the repo instead, which the `continuity init` CLI sets up.",
+    inputSchema: {
+      name: z.string().describe("Short kebab-case project name. Becomes the directory under ~/.continuity/projects and the handle passed as `project` to every other tool."),
+      mission: z.string().optional().describe("One sentence on what the project is for. Rendered as the resume context's title, so a future session sees it first."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
   async ({ name, mission }) => {
     const s = Store.forProject(name);
     ensureRepo(s.gitDir);
@@ -72,17 +91,50 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "resume_context",
-  "Return the current project state to resume work: mission, frozen constraints, active decisions (with the reasons they superseded older ones), rejected paths not to re-propose, open questions, and the next step. Call at the start of a session.",
-  { ...projectArg },
+  {
+    title: "Resume context",
+    description:
+      "Return the current project state as a deterministic projection: mission, milestone, next step, frozen " +
+      "constraints, active decisions each annotated with the reason it replaced its predecessor, rejected " +
+      "alternatives, parked conflicts, and open questions. Read-only; writes nothing. Call this FIRST when " +
+      "starting work on an ongoing project and honour it — frozen items and rejected alternatives are " +
+      "authoritative, not suggestions. No model runs in this path, so the same state always yields the same " +
+      "text. Output is budgeted to roughly 16KB and states explicitly when it had to trim.",
+    inputSchema: { project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory.") },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  },
   async ({ project }) => text(renderFor(resolveStore(project))),
 );
 
-server.tool(
+server.registerTool(
   "record_decision",
-  "Record a decision the project has settled on. Capture autonomously as you observe it.",
-  { ...projectArg, title: z.string(), body: z.string().optional(), confidence: z.enum(["confirmed", "tentative"]).optional() },
+  {
+    title: "Record decision",
+    description:
+      "Append a decision the user has settled. Writes one markdown file plus a git commit; nothing is " +
+      "overwritten or removed, so a mistaken entry is corrected by superseding it rather than by editing. The " +
+      "decision then appears in every future resume context. Capture autonomously as you observe it — no " +
+      "permission needed — but only for things a future session could not re-derive; skip restatements and " +
+      "progress narration.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      title: z.string().describe("One crisp fact, phrased as a statement. This exact text appears in every future resume context, so make it self-contained."),
+      body: z.string().optional().describe("The reasoning behind it. Keep it short: bodies are re-read in every future session and count against the resume budget."),
+      confidence: z
+        .enum(["confirmed", "tentative"])
+        .optional()
+        .describe("'confirmed' when the user stated it plainly; 'tentative' when you inferred it. Defaults to tentative, which is the honest default for an inference."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
   async ({ project, title, body, confidence }) => {
     const s = resolveStore(project);
     const c = s.record({ type: "decision", title, body, confidence: confidence ?? "tentative", origin: "auto" });
@@ -91,10 +143,24 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "record_constraint",
-  "Record a constraint future work must respect.",
-  { ...projectArg, title: z.string(), body: z.string().optional() },
+  {
+    title: "Record constraint",
+    description:
+      "Append a constraint that future work must respect. Same persistence as record_decision: one file, one " +
+      "commit, append-only. A constraint is a boundary rather than a choice — 'ids stay short and typeable' " +
+      "rather than 'we chose X'. Use freeze_claim only if the user wants it to become unchangeable.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      title: z.string().describe("The boundary, phrased as a rule future work must satisfy. Appears verbatim in every future resume context."),
+      body: z.string().optional().describe("Why the constraint exists. Kept short — it is re-read every session."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
   async ({ project, title, body }) => {
     const s = resolveStore(project);
     const c = s.record({ type: "constraint", title, body, confidence: "confirmed", origin: "auto" });
@@ -103,10 +169,24 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "record_rejection",
-  "Record an alternative that was considered and rejected, and WHY — so no future session re-proposes it.",
-  { ...projectArg, title: z.string(), reason: z.string() },
+  {
+    title: "Record rejection",
+    description:
+      "Append an alternative that was considered and rejected, together with the reason. It is then listed " +
+      "under 'Do NOT revisit' in every future resume context, which is the point: it stops the same idea being " +
+      "re-proposed months later. Append-only, like the other record_* tools.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      title: z.string().describe("The rejected approach, stated as the thing someone might otherwise propose."),
+      reason: z.string().describe("Why it was rejected. Required, because the reason is what prevents it being re-proposed — a bare rejection teaches a future session nothing."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
   async ({ project, title, reason }) => {
     const s = resolveStore(project);
     const c = s.record({ type: "rejected_alternative", title, status: "rejected", reason, confidence: "confirmed", origin: "auto" });
@@ -115,10 +195,28 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "record_open",
-  "Record an open question, risk, milestone, or next action. type is one of: question | risk | milestone | next_action.",
-  { ...projectArg, type: z.enum(["question", "risk", "milestone", "next_action"]), title: z.string(), body: z.string().optional() },
+  {
+    title: "Record open item",
+    description:
+      "Append an open question, risk, milestone or next action. These are recorded with status 'open', so they " +
+      "keep surfacing in the resume context until closed with resolve_claim. Only one milestone and one " +
+      "next_action show at a time — recording a new next_action does not retire the old one, so supersede it " +
+      "via capture when direction changes.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      type: z
+        .enum(["question", "risk", "milestone", "next_action"])
+        .describe("question: something undecided. risk: something that could go wrong. milestone: the current goal. next_action: where to resume."),
+      title: z.string().describe("The question, risk, goal or next step in one line."),
+      body: z.string().optional().describe("Detail a future session needs. Keep it short — the next_action body is rendered in the resume header."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
   async ({ project, type, title, body }) => {
     const s = resolveStore(project);
     const c = s.record({ type, title, body, status: "open", confidence: "confirmed", origin: "auto" });
@@ -127,25 +225,39 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "capture",
-  "Autonomously capture a BATCH of claim ops in one call, run through the reconciler (dedupe, lineage-preserving supersession, and a frozen-guard that parks anything that would contradict a frozen claim). Call resume_context first so you know existing ids and which are frozen. Ops: {op:'add'|'reject'|'supersede', type?, title, body?, reason?, confidence?, old?(for supersede), conflicts_with?(id/title of a claim it clashes with)}.",
   {
-    ...projectArg,
-    ops: z
-      .array(
-        z.object({
-          op: z.enum(["add", "reject", "supersede"]),
-          type: z.string().optional(),
-          title: z.string(),
-          body: z.string().optional(),
-          reason: z.string().optional(),
-          confidence: z.enum(["confirmed", "tentative"]).optional(),
-          old: z.string().optional(),
-          conflicts_with: z.string().optional(),
-        }),
-      )
-      .describe("Batch of capture ops."),
+    title: "Capture batch",
+    description:
+      "Apply a BATCH of claim operations in one call, through the reconciler. Prefer this over several record_* " +
+      "calls when a turn produced more than one thing. The reconciler enforces what you should not be trusted " +
+      "to enforce yourself: a near-identical claim is skipped rather than duplicated, superseding archives the " +
+      "old claim with the reason instead of deleting it, and anything that would contradict a FROZEN claim is " +
+      "parked as needs_review for a human rather than applied. Append-only: nothing is removed, so the worst " +
+      "case is a claim you later supersede. Call resume_context first so you know existing ids and which claims " +
+      "are frozen.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      ops: z
+        .array(
+          z.object({
+            op: z.enum(["add", "reject", "supersede"]).describe("add: a new claim. reject: a rejected alternative, which becomes a guardrail. supersede: replace an existing claim, keeping its lineage."),
+            type: z.string().optional().describe("Claim type: decision, constraint, architecture, question, risk, milestone, next_action, requirement, hypothesis, experiment, mission, rejected_alternative. Unknown types are REJECTED with a note rather than coerced. Defaults to decision for add."),
+            title: z.string().describe("One crisp fact. Also the dedupe key: a live claim with the same normalised title is skipped."),
+            body: z.string().optional().describe("Detail a future session needs. Keep short — re-read every session."),
+            reason: z.string().optional().describe("For reject: why it must never be re-proposed. For supersede: why the old claim was replaced. This reason travels into future resume contexts."),
+            confidence: z.enum(["confirmed", "tentative"]).optional().describe("'confirmed' only when the user stated it plainly."),
+            old: z.string().optional().describe("supersede only: the claim being replaced, by id or unique title substring. If it cannot be resolved uniquely the op is skipped with a note."),
+            conflicts_with: z.string().optional().describe("Flag that this claim contradicts an existing one, by id or title. If that claim is frozen, this one is PARKED for review instead of applied."),
+          }),
+        )
+        .describe("The batch. Ops are applied in order against state that is re-read between each, so a supersede can target something added earlier in the same batch."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   async ({ project, ops }) => {
     const s = resolveStore(project);
@@ -162,10 +274,25 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "freeze_claim",
-  "Freeze a claim so it must never change — the one deliberate lock. Use only on explicit user request. Accepts an id or a title substring.",
-  { ...projectArg, id: z.string() },
+  {
+    title: "Freeze claim",
+    description:
+      "Mark a claim frozen: an invariant that must never change. This is the one deliberate lock in the model, " +
+      "so call it ONLY when the user explicitly asks for something to be locked — never on your own initiative. " +
+      "Once frozen, autonomous capture can no longer supersede it: a contradicting claim is parked for human " +
+      "review instead. Overriding it later requires resolve_claim with unfreeze, which is also an explicit " +
+      "human decision. Idempotent: freezing an already-frozen claim changes nothing.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      id: z.string().describe("Claim id (for example c1) or a unique substring of its title — 'why' and 'freeze' both accept either."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
   async ({ project, id }) => {
     const s = resolveStore(project);
     const matches = s.resolveClaims(id);
@@ -177,21 +304,35 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "resolve_claim",
-  "Close a claim, recording WHY. Two uses: (1) a claim parked as needs_review by the reconciler — action 'accept' makes it win (superseding whatever it conflicted with) or 'reject' turns it into a guardrail so it is never re-proposed; (2) an open risk/question/next_action that has been dealt with — action 'close'. Accepting over a FROZEN claim additionally requires unfreeze=true, because breaking a frozen invariant is a deliberate human act: ask the user first.",
   {
-    ...projectArg,
-    claim: z.string().describe("Claim id, or a title substring."),
-    action: z
-      .enum(["accept", "reject", "close"])
+    title: "Resolve claim",
+    description:
+      "Close a claim, recording WHY. Two uses. (1) A claim parked as needs_review by the reconciler: action " +
+      "'accept' makes it win, superseding whatever it conflicted with, or 'reject' turns it into a guardrail so " +
+      "it is never re-proposed. (2) An open risk, question or next_action that has been dealt with: action " +
+      "'close' moves it to resolved, or done for a next_action or milestone. The reason is mandatory — a claim " +
+      "that simply vanishes from the resume context teaches a future session nothing. Nothing is deleted; " +
+      "closing archives. Accepting a claim parked against a FROZEN one additionally requires unfreeze, because " +
+      "breaking a frozen invariant is the user's decision: ask them first.",
+    inputSchema: {
+      project: z
+      .string()
       .optional()
-      .describe("Parked claims must say accept or reject; live claims default to close."),
-    reason: z.string().describe("Why it is being closed. Required — this is what a future session reads."),
-    unfreeze: z
-      .boolean()
-      .optional()
-      .describe("Only to accept a claim parked against a FROZEN one. Requires the user's explicit go-ahead."),
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      claim: z.string().describe("Claim id, or a unique substring of its title."),
+      action: z
+        .enum(["accept", "reject", "close"])
+        .optional()
+        .describe("Parked claims must say accept or reject; anything else defaults to close. accept applies only to a parked claim."),
+      reason: z.string().describe("Why it is being closed. Required — this is the part a future session reads, and it is surfaced by the 'why' tool."),
+      unfreeze: z
+        .boolean()
+        .optional()
+        .describe("Only to accept a claim parked against a FROZEN one. Requires the user's explicit go-ahead; without it the call is refused rather than silently overriding the invariant."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
   },
   async ({ project, claim, action, reason, unfreeze }) => {
     const s = resolveStore(project);
@@ -206,10 +347,23 @@ server.tool(
   },
 );
 
-server.tool(
+server.registerTool(
   "why",
-  "Explain what a claim replaced and why (supersession lineage). Accepts an id or a title substring.",
-  { ...projectArg, id: z.string() },
+  {
+    title: "Why",
+    description:
+      "Explain a claim's supersession lineage: what it replaced and the reason given at the time, plus the " +
+      "reason it was closed if it has been resolved. Read-only. Use it before re-opening a settled question — " +
+      "the answer is often that it was already decided and why.",
+    inputSchema: {
+      project: z
+      .string()
+      .optional()
+      .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      id: z.string().describe("Claim id or a unique substring of its title."),
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  },
   async ({ project, id }) => {
     const s = resolveStore(project);
     const matches = s.resolveClaims(id);
