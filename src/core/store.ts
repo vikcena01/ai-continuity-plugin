@@ -8,6 +8,9 @@ import { isRepo } from "./git.js";
 const STATE_DIR = ".continuity"; // repo-mode state dir
 const CLAIMS = "claims";
 
+/** Statuses at which a mission is the current one. */
+const LIVE_FOR_MISSION = new Set<string>(["active", "accepted", "frozen"]);
+
 /** Short, human-friendly id prefixes so `freeze d3` / `why c1` are typeable. */
 const TYPE_PREFIX: Record<ClaimType, string> = {
   mission: "mission",
@@ -231,6 +234,35 @@ export class Store {
     c.provenance.updated = new Date().toISOString();
     this.write(c);
     return c;
+  }
+
+  /**
+   * Set or replace the project's mission — the one line at the top of every
+   * resume context.
+   *
+   * Replacing supersedes rather than amending in place, unlike next_action
+   * (a3kw). A mission change is a strategic pivot, and "why did the mission
+   * change?" is exactly the question someone asks later, so the predecessor and
+   * the reason are kept as claims.
+   */
+  setMission(input: { title: string; body?: string; reason?: string }): { claim: Claim; replaced?: Claim } {
+    const live = this.list().filter((c) => c.type === "mission" && LIVE_FOR_MISSION.has(c.status));
+    const current = live[0];
+
+    if (!current) {
+      return { claim: this.record({ type: "mission", title: input.title, body: input.body, status: "active", confidence: "confirmed" }) };
+    }
+    if (current.title.trim() === input.title.trim() && (input.body ?? current.body) === current.body) {
+      return { claim: current };
+    }
+    if (!input.reason?.trim()) {
+      throw new Error(
+        `A mission already exists: "${current.title}". Replacing it needs a reason — a pivot without a recorded why is exactly what this tool exists to prevent.`,
+      );
+    }
+    const fresh = this.record({ type: "mission", title: input.title, body: input.body, status: "active", confidence: "confirmed" });
+    this.supersede(current.id, fresh.id, input.reason);
+    return { claim: fresh, replaced: current };
   }
 
   freeze(id: string): Claim {

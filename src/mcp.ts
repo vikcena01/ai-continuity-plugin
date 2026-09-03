@@ -35,7 +35,7 @@ function save(s: Store, msg: string): void {
 }
 
 const server = new McpServer(
-  { name: "continuity", version: "1.2.0" },
+  { name: "continuity", version: "1.3.0" },
   {
     instructions:
       "Continuity maintains durable, versioned project state across sessions. " +
@@ -143,6 +143,49 @@ server.registerTool(
     const c = s.record({ type: "decision", title, body, confidence: confidence ?? "tentative", origin: "auto" });
     save(s, `continuity: record decision ${c.id}`);
     return text(`Recorded decision [${c.id}] (${c.confidence})`);
+  },
+);
+
+server.registerTool(
+  "record_mission",
+  {
+    title: "Record mission",
+    description:
+      "Set or replace the project's mission \u2014 the single line rendered at the top of every resume " +
+      "context, which is what a fresh session reads first. Creates it if none exists. Replacing an existing " +
+      "mission REQUIRES a reason, and supersedes rather than overwrites: the previous mission is archived as " +
+      "a claim with the reason, because a strategic pivot is exactly what someone asks 'why did this change?' " +
+      "about later. Setting the identical text is a no-op. Use this rather than capture with type mission; " +
+      "use create_project instead only when the project does not exist yet.",
+    inputSchema: {
+      project: z
+        .string()
+        .optional()
+        .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      title: z
+        .string()
+        .describe("The mission in one line, phrased as what the project is for. Appears as the resume context's heading, so make it self-contained."),
+      body: z.string().optional().describe("Optional elaboration. Rendered under the heading, so keep it to a sentence."),
+      reason: z
+        .string()
+        .optional()
+        .describe("Why the mission is changing. Required only when replacing an existing mission; omitted on first set. Travels with the superseded claim."),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ project, title, body, reason }) => {
+    const s = resolveStore(project);
+    try {
+      const { claim, replaced } = s.setMission({ title, body, reason });
+      save(s, replaced ? `continuity: mission ${claim.id} replaces ${replaced.id}` : `continuity: set mission ${claim.id}`);
+      return text(
+        replaced
+          ? `Mission set [${claim.id}], replacing [${replaced.id}] "${replaced.title}" \u2014 lineage kept, run why ${claim.id}`
+          : `Mission set [${claim.id}]`,
+      );
+    } catch (e) {
+      return text(e instanceof Error ? e.message : String(e));
+    }
   },
 );
 

@@ -3745,6 +3745,7 @@ function revert(dir, ref) {
 // src/core/store.ts
 var STATE_DIR = ".continuity";
 var CLAIMS = "claims";
+var LIVE_FOR_MISSION = /* @__PURE__ */ new Set(["active", "accepted", "frozen"]);
 var TYPE_PREFIX = {
   mission: "mission",
   decision: "d",
@@ -3911,6 +3912,33 @@ var Store = class _Store {
     c.provenance.updated = (/* @__PURE__ */ new Date()).toISOString();
     this.write(c);
     return c;
+  }
+  /**
+   * Set or replace the project's mission — the one line at the top of every
+   * resume context.
+   *
+   * Replacing supersedes rather than amending in place, unlike next_action
+   * (a3kw). A mission change is a strategic pivot, and "why did the mission
+   * change?" is exactly the question someone asks later, so the predecessor and
+   * the reason are kept as claims.
+   */
+  setMission(input) {
+    const live = this.list().filter((c) => c.type === "mission" && LIVE_FOR_MISSION.has(c.status));
+    const current = live[0];
+    if (!current) {
+      return { claim: this.record({ type: "mission", title: input.title, body: input.body, status: "active", confidence: "confirmed" }) };
+    }
+    if (current.title.trim() === input.title.trim() && (input.body ?? current.body) === current.body) {
+      return { claim: current };
+    }
+    if (!input.reason?.trim()) {
+      throw new Error(
+        `A mission already exists: "${current.title}". Replacing it needs a reason \u2014 a pivot without a recorded why is exactly what this tool exists to prevent.`
+      );
+    }
+    const fresh = this.record({ type: "mission", title: input.title, body: input.body, status: "active", confidence: "confirmed" });
+    this.supersede(current.id, fresh.id, input.reason);
+    return { claim: fresh, replaced: current };
   }
   freeze(id) {
     const c = this.must(id);
@@ -4545,6 +4573,20 @@ switch (cmd) {
     if (out.superseded) console.log(`  superseded [${out.superseded}] \u2014 lineage kept, run 'continuity why ${out.id}'`);
     break;
   }
+  case "mission": {
+    const title = positionals().join(" ");
+    if (!title) fail('Usage: continuity mission "the mission" [--body "..."] [--reason "why it changed"]');
+    const s = getStore();
+    let out;
+    try {
+      out = s.setMission({ title, body: flag("body"), reason: flag("reason") });
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e));
+    }
+    saveMsg(s, out.replaced ? `continuity: mission ${out.claim.id} replaces ${out.replaced.id}` : `continuity: set mission ${out.claim.id}`);
+    console.log(out.replaced ? `Mission set [${out.claim.id}], replacing [${out.replaced.id}]` : `Mission set [${out.claim.id}]`);
+    break;
+  }
   case "review": {
     const s = getStore();
     const r = review(s);
@@ -4614,6 +4656,7 @@ Marked reviewed through ${head}.`);
   continuity supersede <old> <new> --reason "why"
   continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
+  continuity mission "the mission" [--reason "why it changed"]
   continuity review [--accept]          (semantic diff of what capture wrote)
   continuity migrate                    (rewrite all claims at the current schema)
   continuity list

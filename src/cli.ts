@@ -198,6 +198,21 @@ switch (cmd) {
     break;
   }
 
+  case "mission": {
+    const title = positionals().join(" ");
+    if (!title) fail('Usage: continuity mission "the mission" [--body "..."] [--reason "why it changed"]');
+    const s = getStore();
+    let out;
+    try {
+      out = s.setMission({ title, body: flag("body"), reason: flag("reason") });
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e));
+    }
+    saveMsg(s, out.replaced ? `continuity: mission ${out.claim.id} replaces ${out.replaced.id}` : `continuity: set mission ${out.claim.id}`);
+    console.log(out.replaced ? `Mission set [${out.claim.id}], replacing [${out.replaced.id}]` : `Mission set [${out.claim.id}]`);
+    break;
+  }
+
   case "review": {
     // The trust ritual for autonomous capture (d4): a SEMANTIC diff of what the
     // model wrote, not `git log -p` over YAML that nobody reads.
@@ -282,6 +297,7 @@ switch (cmd) {
   continuity supersede <old> <new> --reason "why"
   continuity resolve <id-or-text> [--accept|--reject|--close] --reason "why" [--unfreeze]
   continuity why <id-or-text>
+  continuity mission "the mission" [--reason "why it changed"]
   continuity review [--accept]          (semantic diff of what capture wrote)
   continuity migrate                    (rewrite all claims at the current schema)
   continuity list

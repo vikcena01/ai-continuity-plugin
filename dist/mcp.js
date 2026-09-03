@@ -24853,6 +24853,7 @@ function revListSince(dir, path, ref) {
 // src/core/store.ts
 var STATE_DIR = ".continuity";
 var CLAIMS = "claims";
+var LIVE_FOR_MISSION = /* @__PURE__ */ new Set(["active", "accepted", "frozen"]);
 var TYPE_PREFIX = {
   mission: "mission",
   decision: "d",
@@ -25019,6 +25020,33 @@ var Store = class _Store {
     c.provenance.updated = (/* @__PURE__ */ new Date()).toISOString();
     this.write(c);
     return c;
+  }
+  /**
+   * Set or replace the project's mission — the one line at the top of every
+   * resume context.
+   *
+   * Replacing supersedes rather than amending in place, unlike next_action
+   * (a3kw). A mission change is a strategic pivot, and "why did the mission
+   * change?" is exactly the question someone asks later, so the predecessor and
+   * the reason are kept as claims.
+   */
+  setMission(input) {
+    const live = this.list().filter((c) => c.type === "mission" && LIVE_FOR_MISSION.has(c.status));
+    const current = live[0];
+    if (!current) {
+      return { claim: this.record({ type: "mission", title: input.title, body: input.body, status: "active", confidence: "confirmed" }) };
+    }
+    if (current.title.trim() === input.title.trim() && (input.body ?? current.body) === current.body) {
+      return { claim: current };
+    }
+    if (!input.reason?.trim()) {
+      throw new Error(
+        `A mission already exists: "${current.title}". Replacing it needs a reason \u2014 a pivot without a recorded why is exactly what this tool exists to prevent.`
+      );
+    }
+    const fresh = this.record({ type: "mission", title: input.title, body: input.body, status: "active", confidence: "confirmed" });
+    this.supersede(current.id, fresh.id, input.reason);
+    return { claim: fresh, replaced: current };
   }
   freeze(id) {
     const c = this.must(id);
@@ -25471,7 +25499,7 @@ function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
 }
 var server = new McpServer(
-  { name: "continuity", version: "1.2.0" },
+  { name: "continuity", version: "1.3.0" },
   {
     instructions: "Continuity maintains durable, versioned project state across sessions. At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open or re-propose them. As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection. Two shapes are missed most often and are worth watching for: FRAMING statements that set strategy or what matters ('X is the moat', 'Y is the real bottleneck') belong as a decision; and STANDING INSTRUCTIONS about how to operate or who decides ('never do X without asking', 'you have full ownership') belong as a CONSTRAINT, not a question, because a question reads as an open topic rather than a rule. (capture is autonomous \u2014 no need to ask permission). Capture SPARINGLY: only what a future session could not re-derive, never restatements of existing claims or progress narration, and keep bodies short because they are re-read every session. Prefer superseding an existing claim over adding a near-duplicate. Only call freeze_claim when the user explicitly wants something locked as unchangeable. If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason."
   }
@@ -25534,6 +25562,32 @@ server.registerTool(
     const c = s.record({ type: "decision", title, body, confidence: confidence ?? "tentative", origin: "auto" });
     save(s, `continuity: record decision ${c.id}`);
     return text(`Recorded decision [${c.id}] (${c.confidence})`);
+  }
+);
+server.registerTool(
+  "record_mission",
+  {
+    title: "Record mission",
+    description: "Set or replace the project's mission \u2014 the single line rendered at the top of every resume context, which is what a fresh session reads first. Creates it if none exists. Replacing an existing mission REQUIRES a reason, and supersedes rather than overwrites: the previous mission is archived as a claim with the reason, because a strategic pivot is exactly what someone asks 'why did this change?' about later. Setting the identical text is a no-op. Use this rather than capture with type mission; use create_project instead only when the project does not exist yet.",
+    inputSchema: {
+      project: external_exports.string().optional().describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      title: external_exports.string().describe("The mission in one line, phrased as what the project is for. Appears as the resume context's heading, so make it self-contained."),
+      body: external_exports.string().optional().describe("Optional elaboration. Rendered under the heading, so keep it to a sentence."),
+      reason: external_exports.string().optional().describe("Why the mission is changing. Required only when replacing an existing mission; omitted on first set. Travels with the superseded claim.")
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ project: project2, title, body, reason }) => {
+    const s = resolveStore(project2);
+    try {
+      const { claim, replaced } = s.setMission({ title, body, reason });
+      save(s, replaced ? `continuity: mission ${claim.id} replaces ${replaced.id}` : `continuity: set mission ${claim.id}`);
+      return text(
+        replaced ? `Mission set [${claim.id}], replacing [${replaced.id}] "${replaced.title}" \u2014 lineage kept, run why ${claim.id}` : `Mission set [${claim.id}]`
+      );
+    } catch (e) {
+      return text(e instanceof Error ? e.message : String(e));
+    }
   }
 );
 server.registerTool(
