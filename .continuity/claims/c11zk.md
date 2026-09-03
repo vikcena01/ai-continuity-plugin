@@ -5,16 +5,21 @@ type: constraint
 title: >-
   Test harnesses must not assume machine defaults, fixed cross-process keys, or
   ordered MCP responses
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T04:18:03.515Z'
 supersedes:
   - c10ir
-superseded_by: null
+superseded_by: c16vw
 depends_on: []
 tags: []
+superseded_reason: >-
+  Third occurrence of the same class, which is the threshold I set for
+  generalising the rule. Each instance passed locally and failed elsewhere, or
+  passed by hand and failed in the suite — the most expensive kind of test bug
+  because it looks like broken code.
 ---
 
 Three rules, each from a real failure that looked like broken code:
