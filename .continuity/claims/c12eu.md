@@ -5,15 +5,19 @@ type: constraint
 title: >-
   package.json must keep main and exports pointing at dist/mcp.js — bin entries
   are not an entry point
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T04:23:39.890Z'
 supersedes: []
-superseded_by: null
+superseded_by: c13kw
 depends_on: []
 tags: []
+superseded_reason: >-
+  index.js duplicates what main already points at, so a tidy-up would delete it
+  as dead weight; the resulting failure appears only in someone else's
+  container, never locally.
 reason: >-
   Removing them looks harmless because nothing imports this package, but the
   failure lands in someone else's container as a missing file nobody ever wrote.
