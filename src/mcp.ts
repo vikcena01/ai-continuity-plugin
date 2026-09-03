@@ -35,7 +35,7 @@ function save(s: Store, msg: string): void {
 }
 
 const server = new McpServer(
-  { name: "continuity", version: "1.3.0" },
+  { name: "continuity", version: "1.3.1" },
   {
     instructions:
       "Continuity maintains durable, versioned project state across sessions. " +
@@ -398,15 +398,23 @@ server.registerTool(
   {
     title: "Why",
     description:
-      "Explain a claim's supersession lineage: what it replaced and the reason given at the time, plus the " +
-      "reason it was closed if it has been resolved. Read-only. Use it before re-opening a settled question — " +
-      "the answer is often that it was already decided and why.",
+      "Explain a claim's history. Read-only; writes nothing. Returns the claim's current title and status, " +
+      "then one line per predecessor it replaced with the reason recorded at the time, then its closing reason " +
+      "if it has been resolved. A claim that replaced nothing says so explicitly ('supersedes nothing \u2014 " +
+      "original decision') rather than returning an empty result, so a blank answer always means the lookup " +
+      "failed, never that the history is empty. Accepts a claim id or a unique substring of its title; an " +
+      "ambiguous substring returns the candidate ids instead of guessing, and no match says so. " +
+      "Call it before re-opening anything that looks settled \u2014 the answer is often that it was already " +
+      "decided, reversed once, and why, which is the difference between a considered change and re-litigating " +
+      "a closed question.",
     inputSchema: {
       project: z
       .string()
       .optional()
       .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
-      id: z.string().describe("Claim id or a unique substring of its title."),
+      id: z
+        .string()
+        .describe("Claim id (for example d4) or a unique substring of its title. Substrings are matched case-insensitively against both id and title, so a distinctive few words are usually enough."),
     },
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   },

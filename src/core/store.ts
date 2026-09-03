@@ -167,9 +167,24 @@ export class Store {
 
   // ---- writes ------------------------------------------------------
 
+  /**
+   * Create the claims directory and, on a genuinely new project, its mission.
+   *
+   * Idempotent by contract, which it previously was not: init recorded a mission
+   * unconditionally, so calling create_project twice produced two mission claims.
+   * The duplicate was invisible in the projection — renderResumeContext takes the
+   * first live mission — so it accumulated silently while the tool advertised
+   * idempotentHint: true. An annotation that lies is worse than none.
+   *
+   * An existing mission is left alone rather than replaced: changing a mission is
+   * what record_mission is for, and it requires a reason.
+   */
   init(mission?: string): void {
     mkdirSync(this.claimsDir(), { recursive: true });
-    if (mission) this.record({ type: "mission", title: mission, status: "active", confidence: "confirmed" });
+    if (!mission) return;
+    const existing = this.list().find((c) => c.type === "mission" && LIVE_FOR_MISSION.has(c.status));
+    if (existing) return;
+    this.record({ type: "mission", title: mission, status: "active", confidence: "confirmed" });
   }
 
   write(c: Claim): void {

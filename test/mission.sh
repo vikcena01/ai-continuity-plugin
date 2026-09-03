@@ -57,6 +57,30 @@ ok "its params are described"            'grep -q "Required only when replacing"
 ok "tool count is now 12"                '[[ $(grep -o "\"name\":\"[a-z_]*\"" "$TMP/tools.json" | wc -l | tr -d " ") -ge 12 ]]'
 ok "it is not reachable only via capture" 'grep -q "rather than capture with type mission" "$TMP/tools.json"'
 
+
+# --- annotation honesty: every idempotentHint: true must actually hold ---------
+# create_project advertised idempotentHint and recorded a mission unconditionally,
+# so two identical calls left two mission claims — invisible in the projection,
+# which takes the first live mission, so it accumulated silently.
+C init "A mission" --project idem >/dev/null
+C init "A mission" --project idem >/dev/null
+C init "A mission" --project idem >/dev/null
+ok "init is idempotent (one mission)"  '[[ $(ls "$TMP/projects/idem/claims" | grep -c mission) -eq 1 ]]'
+ok "and the projection is unaffected"  'C resume --project idem | head -1 | grep -q "A mission"'
+
+# re-init must not silently REPLACE either — changing a mission is record_mission's job
+C mission "A different mission" --reason "pivot" --project idem >/dev/null
+C init "A mission" --project idem >/dev/null
+ok "re-init leaves an existing mission" 'C resume --project idem | head -1 | grep -q "A different mission"'
+
+# freeze_claim also claims idempotency
+C record-constraint "Codes are 7 chars" --project idem >/dev/null
+C freeze "7 chars" --project idem >/dev/null
+n1="$(ls "$TMP/projects/idem/claims" | wc -l | tr -d ' ')"
+C freeze "7 chars" --project idem >/dev/null
+ok "freeze is idempotent (no new claim)" '[[ $(ls "$TMP/projects/idem/claims" | wc -l | tr -d " ") -eq "$n1" ]]'
+ok "and stays frozen"                    'C list --project idem | grep -qE "frozen.*7 chars"'
+
 echo ""
 echo "mission: $pass passed, $fail failed"
 rm -rf "$TMP"

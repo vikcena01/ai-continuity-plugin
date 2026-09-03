@@ -7,14 +7,14 @@
   },
   "metadata": {
     "description": "Durable, versioned project state for long-running AI work",
-    "version": "1.3.0"
+    "version": "1.3.1"
   },
   "plugins": [
     {
       "name": "continuity",
       "source": "./",
       "description": "Not a memory tool. Continuity answers \"what is true about this project now, and what must not be touched?\" — decisions, constraints, rejected approaches, open questions and the next step, stored as typed claims in plain markdown with git as the append-only log. A SessionStart hook restores that state automatically at the start of every session; a Stop hook captures new decisions as you work, with no approval prompts. The resume context is a deterministic projection over the files with no model in the read path, so the same state always produces the same context. Frozen claims cannot be silently contradicted: the reconciler parks conflicting captures for review instead of applying them, and superseding a decision keeps the reason it was replaced, so a reversal cannot be quietly re-litigated. Everything is git-diffable and hand-editable, so you audit what was captured by reading a diff. Claim ids are collision-safe, so two people capturing on separate clones merge cleanly. Ships an MCP server, a skill, hooks and /resume /freeze /why commands; dist/ is committed and dependency-free, so there is no build step on install.",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "strict": true,
       "homepage": "https://github.com/vikcena01/ai-continuity-plugin",
       "license": "MIT"
