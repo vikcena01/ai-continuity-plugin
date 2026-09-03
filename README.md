@@ -169,7 +169,7 @@ It catches hand edits as well as tool writes, and the resume context tells you w
 
 ## Status
 
-**v1.1 — deterministic core + CLI + MCP server + Claude Code plugin.** Versioned claim files, collision-safe ids, fuzzy lookup, a budgeted resume projection, git-backed event log, and 125 assertions across seven suites (`npm test`).
+**v1.1.1 — deterministic core + CLI + MCP server + Claude Code plugin.** Versioned claim files, collision-safe ids, fuzzy lookup, a budgeted resume projection, git-backed event log, and 125 assertions across seven suites (`npm test`).
 
 Working today:
 
@@ -178,6 +178,12 @@ Working today:
 - **A `resolve` verb** to close what the reconciler parks, and to close risks/questions once they are settled.
 
 Known limits, tracked as claims in this repo's own `.continuity/`: the Stop-hook capture check is throttled to at most once per 10s, so a decision settled in a very fast exchange can still be missed (`q3`); and reliable status extraction from messy sessions remains the open technical risk (`q2`).
+
+## Listed on
+
+<a href="https://glama.ai/mcp/servers/vikcena01/ai-continuity-plugin">
+  <img src="https://glama.ai/mcp/servers/vikcena01/ai-continuity-plugin/badges/card.svg" alt="Continuity on Glama" width="380">
+</a>
 
 ## The mark
 
