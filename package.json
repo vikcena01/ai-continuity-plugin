@@ -12,6 +12,11 @@
     "url": "https://github.com/vikcena01/ai-continuity-plugin/issues"
   },
   "type": "module",
+  "main": "dist/mcp.js",
+  "exports": {
+    ".": "./dist/mcp.js",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "continuity": "dist/cli.js",
     "continuity-mcp": "dist/mcp.js"
