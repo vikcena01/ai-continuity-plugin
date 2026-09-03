@@ -5,11 +5,12 @@ type: risk
 title: >-
   CI stopped being scheduled entirely — rk9cg's fix shipped and passed, but no
   runs are created any more
-status: open
+status: resolved
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-08-26T16:12:00.575Z'
+  updated: '2026-09-03T06:11:39.910Z'
 supersedes: []
 superseded_by: null
 depends_on: []
@@ -18,6 +19,11 @@ reason: >-
   rk9cg is closed as fixed and verified green, which is true of the workflow but
   no longer true of the protection: a future session would trust a gate that is
   not running.
+resolution: >-
+  Recovered on its own. 15 runs total, the last four all green including
+  b4215d1, and the badge now reads 'ci: passing'. No action was taken and none
+  was needed — it was a GitHub-side scheduling outage, which is why nothing in
+  the repo could reproduce or fix it.
 ---
 
 Timeline: green on 64c6973 and e9783de (both jobs, Node 20 and 22, including the dist/ reproducibility gate), then startup_failure on 5b07bbc, then NO runs created at all — 349c7ea produced zero.
