@@ -48,7 +48,7 @@ That's it — the bundled MCP server, the `continuity` skill (auto-resume + auto
 ```bash
 npm install
 npm run build   # typecheck + bundle to dist/
-npm test        # build + 69 assertions across four suites
+npm test        # build + 186 assertions across ten suites
 ```
 
 ## The loop (CLI)
@@ -62,6 +62,8 @@ continuity freeze "7-char base62"     # lock an invariant — fuzzy: id OR title
 continuity resume                     # <- the compact state a new session gets
 continuity why "301"                  # <- what a decision replaced, and why
 continuity resolve "8-char codes" --reject --reason "separate namespace"
+continuity mission "..." --reason "why it changed"   # replacing one needs a reason
+continuity list --query "base62"      # search id, title AND body
 continuity list                       # ids are short: d1k3, c2m9, x1p4, ...
 continuity log                        # the git-backed event log
 ```
@@ -96,7 +98,7 @@ Any host that speaks MCP but has no project cwd can use the **MCP server** with 
 }
 ```
 
-Then in chat: *"create a continuity project called snip"* → `create_project`; *"resume snip"* → `resume_context`; the model records decisions/constraints/rejections as you go. A user-invokable **`resume` prompt** is the Desktop substitute for Claude Code's auto-resume hook. Tools: `list_projects`, `create_project`, `resume_context`, `record_decision`, `record_constraint`, `record_rejection`, `record_open`, `capture`, `resolve_claim`, `freeze_claim`, `why`.
+Then in chat: *"create a continuity project called snip"* → `create_project`; *"resume snip"* → `resume_context`; the model records decisions/constraints/rejections as you go. A user-invokable **`resume` prompt** is the Desktop substitute for Claude Code's auto-resume hook. Tools: `list_projects`, `create_project`, `resume_context`, `search_claims`, `record_decision`, `record_constraint`, `record_rejection`, `record_open`, `record_mission`, `capture`, `resolve_claim`, `freeze_claim`, `why`.
 
 ## As a Claude Code plugin (bonus)
 
