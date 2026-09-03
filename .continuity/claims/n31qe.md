@@ -2,14 +2,13 @@
 schema: 1
 id: n31qe
 type: next_action
-title: >-
-  Glama 1.3.0 is live at 100% — three things pending on the user, two optional
-  polish items
+title: v1.4.0 is tagged but not deployed — three things pending on the user
 status: open
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T09:21:48.317Z'
+  updated: '2026-09-03T09:29:09.656Z'
 supersedes:
   - n30lb
 superseded_by: null
@@ -18,14 +17,12 @@ tags: []
 ---
 
 PENDING ON YOU, none doable from a terminal:
-1. SHOW HN — title and first comment drafted in conversation; HN was throttling new posts. Retry a weekday morning US time.
+1. SHOW HN — title and first comment drafted in conversation; HN was throttling posts. Retry a weekday morning US time.
 2. COWORK APP — answer q8w6 by installing there.
-3. REVIEW BASELINE — 130 claims, no marker. Read `continuity list`, then `continuity review --accept`.
+3. REVIEW BASELINE — 131 claims, no marker. Read `continuity list`, then `continuity review --accept`.
 
-OPTIONAL POLISH, both small:
-- rk19rn: no MCP tool lists or searches claims. The CLI sees 130; an agent sees only the budgeted projection, which is titles-only at level 1+ and drops open questions at level 3.
-- record_decision is now the weakest tool definition at 4.0/5, Parameters 3/5 — the prose does not explain how title, body and confidence interact.
+OPTIONAL: deploy v1.4.0 (ed08a51) on Glama. It adds a 13th tool, so Coherence would re-score — its Completeness note specifically cited the missing claim search, which is now closed. Last deploy of 1.3.0 scored 100%, Coherence A, TDQ A 4.5/5, why 3.9 -> 4.7, record_mission 4.9.
 
-DONE: v1.3.0 public and live on Glama at 100% (Coherence A, TDQ A 4.5/5 across 12 tools, why 3.9 -> 4.7, record_mission 4.9 highest). Do not redeploy without a reason. Claude community submission still in review — poll, do not infer from absence.
+DONE in 1.4.0: search_claims (rk19rn), and the record_* reconciler bypass is now disclosed — see rk20 for whether that bypass should be fixed rather than merely documented.
 
-Note for whoever picks this up: the three surface gaps found this session (mission tool, claim search) came from an external scanner, while the capture defects came from auditing real history. Different instruments, different blind spots — use both.
+Waiting: Claude community submission in review — poll, never infer from absence.
