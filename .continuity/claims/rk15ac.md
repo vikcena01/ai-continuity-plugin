@@ -5,15 +5,19 @@ type: risk
 title: >-
   Capture is blind to FRAMING statements — it catches propositions but drops
   strategy and standing instructions
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T07:27:59.862Z'
 supersedes: []
-superseded_by: null
+superseded_by: rk16it
 depends_on: []
 tags: []
+superseded_reason: >-
+  The second pass over this session's 63 real user turns added two failure
+  classes beyond the framing gap the first pass found, so the finding is broader
+  than 'framing statements are dropped'.
 reason: >-
   First result from Capture Audit v0, and it is a confirmed false negative
   rather than a hypothesis: the project's core strategic thesis was stated by
