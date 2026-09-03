@@ -13,7 +13,8 @@
   },
   "type": "module",
   "bin": {
-    "continuity": "dist/cli.js"
+    "continuity": "dist/cli.js",
+    "continuity-mcp": "dist/mcp.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -33,5 +34,14 @@
     "esbuild": "^0.23.0",
     "tsx": "^4.16.0",
     "typescript": "^5.5.0"
-  }
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "commands/",
+    "hooks/",
+    ".claude-plugin/",
+    "README.md",
+    "LICENSE"
+  ]
 }
