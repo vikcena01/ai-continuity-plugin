@@ -5,16 +5,20 @@ type: next_action
 title: >-
   Three things left, all requiring a UI or a fresh session — none can be done
   from a terminal
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T04:18:03.502Z'
 supersedes:
   - n22z8
-superseded_by: null
+superseded_by: n24s0
 depends_on: []
 tags: []
+superseded_reason: >-
+  The previous version claimed the repo Dockerfile was the prerequisite Glama
+  builds. A real build log disproves that, and leaving it would send a future
+  session to debug the wrong file.
 ---
 
 1. GLAMA RELEASE — platform UI only, four clicks at glama.ai/mcp/servers/vikcena01/ai-continuity-plugin/admin/dockerfile: claim the server (GitHub sign-in), configure the build spec, Deploy, Make Release. It gates three of five failing checks. The repo prerequisite is DONE: a Dockerfile that was built and exercised locally. Do not attempt this from a terminal.
