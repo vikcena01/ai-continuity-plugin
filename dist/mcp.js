@@ -25514,7 +25514,7 @@ function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
 }
 var server = new McpServer(
-  { name: "continuity", version: "1.3.1" },
+  { name: "continuity", version: "1.3.0" },
   {
     instructions: "Continuity maintains durable, versioned project state across sessions. At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open or re-propose them. As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection. Two shapes are missed most often and are worth watching for: FRAMING statements that set strategy or what matters ('X is the moat', 'Y is the real bottleneck') belong as a decision; and STANDING INSTRUCTIONS about how to operate or who decides ('never do X without asking', 'you have full ownership') belong as a CONSTRAINT, not a question, because a question reads as an open topic rather than a rule. (capture is autonomous \u2014 no need to ask permission). Capture SPARINGLY: only what a future session could not re-derive, never restatements of existing claims or progress narration, and keep bodies short because they are re-read every session. Prefer superseding an existing claim over adding a near-duplicate. Only call freeze_claim when the user explicitly wants something locked as unchangeable. If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason."
   }

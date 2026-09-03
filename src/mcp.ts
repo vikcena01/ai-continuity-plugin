@@ -35,7 +35,7 @@ function save(s: Store, msg: string): void {
 }
 
 const server = new McpServer(
-  { name: "continuity", version: "1.3.1" },
+  { name: "continuity", version: "1.3.0" },
   {
     instructions:
       "Continuity maintains durable, versioned project state across sessions. " +
