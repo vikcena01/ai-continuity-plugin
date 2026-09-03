@@ -246,7 +246,7 @@ switch (cmd) {
     const ops: CaptureOp[] = Array.isArray(parsed) ? parsed : parsed.ops;
     const s = getStore();
     const r = reconcile(s, ops);
-    saveMsg(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
+    saveMsg(s, `continuity: capture (${r.applied.length} applied, ${r.amended.length} amended, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
     console.log(JSON.stringify(r, null, 2));
     break;
   }

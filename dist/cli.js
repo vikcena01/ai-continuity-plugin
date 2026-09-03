@@ -3888,6 +3888,30 @@ var Store = class _Store {
     this.write(claim);
     return claim;
   }
+  /**
+   * Rewrite a claim in place, keeping its id.
+   *
+   * Used for `next_action`, where superseding produces pure churn: the audit
+   * measured 30 next_action claims of which 29 were superseded — a quarter of
+   * the whole corpus was stale to-do lists, each one a separate file re-read in
+   * every projection until replaced.
+   *
+   * This does NOT violate d1. That decision says git commits are the log and
+   * nothing is deleted from it; an in-place rewrite still appends a commit, and
+   * the previous text stays recoverable by `git log -p`. What it drops is a
+   * separate CLAIM per revision, which for direction is noise rather than
+   * lineage — nobody needs to re-litigate a superseded to-do list the way they
+   * might re-litigate a reversed decision.
+   */
+  amend(id, input) {
+    const c = this.must(id);
+    c.title = input.title;
+    if (input.body !== void 0) c.body = input.body;
+    if (input.confidence) c.confidence = input.confidence;
+    c.provenance.updated = (/* @__PURE__ */ new Date()).toISOString();
+    this.write(c);
+    return c;
+  }
   freeze(id) {
     const c = this.must(id);
     c.status = "frozen";
@@ -4113,7 +4137,7 @@ function findOne(store, q) {
   return m.length === 1 ? m[0] : void 0;
 }
 function reconcile(store, ops) {
-  const res = { applied: [], superseded: [], parked: [], duplicates: [], notes: [] };
+  const res = { applied: [], amended: [], superseded: [], parked: [], duplicates: [], notes: [] };
   for (const op of ops) {
     const live = store.list().filter((c) => LIVE2.has(c.status));
     if (op.op === "add" || op.op === "reject") {
@@ -4172,6 +4196,15 @@ function reconcile(store, ops) {
           conflicts_with: old.id
         });
         res.parked.push(`${c.id} would supersede FROZEN ${old.id} \u2014 parked for review`);
+        continue;
+      }
+      if (old.type === "next_action" && type === "next_action") {
+        const c = store.amend(old.id, {
+          title: op.title,
+          body: op.body,
+          confidence: op.confidence ?? "confirmed"
+        });
+        res.amended.push(`${c.id} (direction updated in place)`);
         continue;
       }
       const fresh = store.record({
@@ -4548,7 +4581,7 @@ Marked reviewed through ${head}.`);
     const ops = Array.isArray(parsed) ? parsed : parsed.ops;
     const s = getStore();
     const r = reconcile(s, ops);
-    saveMsg(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
+    saveMsg(s, `continuity: capture (${r.applied.length} applied, ${r.amended.length} amended, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
     console.log(JSON.stringify(r, null, 2));
     break;
   }

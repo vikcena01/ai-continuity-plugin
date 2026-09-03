@@ -28,6 +28,8 @@ export interface CaptureOp {
 
 export interface CaptureResult {
   applied: string[];
+  /** next_action claims rewritten in place rather than superseded — see Store.amend. */
+  amended: string[];
   superseded: string[];
   parked: string[];
   duplicates: string[];
@@ -66,7 +68,7 @@ function findOne(store: Store, q: string): Claim | undefined {
 }
 
 export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
-  const res: CaptureResult = { applied: [], superseded: [], parked: [], duplicates: [], notes: [] };
+  const res: CaptureResult = { applied: [], amended: [], superseded: [], parked: [], duplicates: [], notes: [] };
 
   for (const op of ops) {
     const live = store.list().filter((c) => LIVE.has(c.status));
@@ -139,6 +141,19 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         res.parked.push(`${c.id} would supersede FROZEN ${old.id} — parked for review`);
         continue;
       }
+      // Direction is state, not a decision with lineage. Superseding it spawned a
+      // fresh claim per revision and left 29 archived to-do lists behind, so an
+      // amend keeps the id and lets git carry the history instead.
+      if (old.type === "next_action" && type === "next_action") {
+        const c = store.amend(old.id, {
+          title: op.title,
+          body: op.body,
+          confidence: op.confidence ?? "confirmed",
+        });
+        res.amended.push(`${c.id} (direction updated in place)`);
+        continue;
+      }
+
       const fresh = store.record({
         type,
         title: op.title,

@@ -35,13 +35,16 @@ function save(s: Store, msg: string): void {
 }
 
 const server = new McpServer(
-  { name: "continuity", version: "1.1.1" },
+  { name: "continuity", version: "1.2.0" },
   {
     instructions:
       "Continuity maintains durable, versioned project state across sessions. " +
       "At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: " +
       "treat FROZEN items and rejected alternatives as authoritative — do not re-open or re-propose them. " +
-      "As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection " +
+      "As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection. " +
+      "Two shapes are missed most often and are worth watching for: FRAMING statements that set strategy or what matters ('X is the moat', "
+      + "'Y is the real bottleneck') belong as a decision; and STANDING INSTRUCTIONS about how to operate or who decides "
+      + "('never do X without asking', 'you have full ownership') belong as a CONSTRAINT, not a question, because a question reads as an open topic rather than a rule. " +
       "(capture is autonomous — no need to ask permission). Capture SPARINGLY: only what a future session could not re-derive, never " +
       "restatements of existing claims or progress narration, and keep bodies short because they are re-read every session. " +
       "Prefer superseding an existing claim over adding a near-duplicate. " +
@@ -262,7 +265,7 @@ server.registerTool(
   async ({ project, ops }) => {
     const s = resolveStore(project);
     const r = reconcile(s, ops as CaptureOp[]);
-    save(s, `continuity: capture (${r.applied.length} applied, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
+    save(s, `continuity: capture (${r.applied.length} applied, ${r.amended.length} amended, ${r.superseded.length} superseded, ${r.parked.length} parked)`);
     const lines = [
       `applied: ${r.applied.join(", ") || "none"}`,
       `superseded: ${r.superseded.join("; ") || "none"}`,

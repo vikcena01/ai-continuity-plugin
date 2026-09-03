@@ -208,6 +208,31 @@ export class Store {
     return claim;
   }
 
+  /**
+   * Rewrite a claim in place, keeping its id.
+   *
+   * Used for `next_action`, where superseding produces pure churn: the audit
+   * measured 30 next_action claims of which 29 were superseded — a quarter of
+   * the whole corpus was stale to-do lists, each one a separate file re-read in
+   * every projection until replaced.
+   *
+   * This does NOT violate d1. That decision says git commits are the log and
+   * nothing is deleted from it; an in-place rewrite still appends a commit, and
+   * the previous text stays recoverable by `git log -p`. What it drops is a
+   * separate CLAIM per revision, which for direction is noise rather than
+   * lineage — nobody needs to re-litigate a superseded to-do list the way they
+   * might re-litigate a reversed decision.
+   */
+  amend(id: string, input: { title: string; body?: string; confidence?: Confidence }): Claim {
+    const c = this.must(id);
+    c.title = input.title;
+    if (input.body !== undefined) c.body = input.body;
+    if (input.confidence) c.confidence = input.confidence;
+    c.provenance.updated = new Date().toISOString();
+    this.write(c);
+    return c;
+  }
+
   freeze(id: string): Claim {
     const c = this.must(id);
     c.status = "frozen";
