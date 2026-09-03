@@ -167,6 +167,10 @@ continuity review --accept   # mark it reviewed
 
 It catches hand edits as well as tool writes, and the resume context tells you when changes are waiting.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Claim-file schema has remained 1 across every release.
+
 ## Status
 
 **v1.3 — deterministic core + CLI + MCP server + Claude Code plugin.** Versioned claim files, collision-safe ids, fuzzy lookup, a budgeted resume projection, git-backed event log, and 164 assertions across nine suites (`npm test`).
