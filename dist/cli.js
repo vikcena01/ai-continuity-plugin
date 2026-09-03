@@ -3851,6 +3851,21 @@ var Store = class _Store {
     const p = join(this.claimsDir(), `${id}.md`);
     return existsSync(p) ? parseClaim(readFileSync(p, "utf8"), `${id}.md`) : void 0;
   }
+  /**
+   * List or search claims. The MCP surface previously exposed only the budgeted
+   * projection (rk19rn), so an agent could not reach a claim the projection had
+   * trimmed — which is exactly when it needs to.
+   *
+   * Searches id, title AND body, because a claim is often remembered by a detail
+   * in its reasoning rather than its title. Returns claims sorted by id so the
+   * same query always yields the same order (d9).
+   */
+  search(q = {}) {
+    const needle = q.query?.trim().toLowerCase();
+    return this.list().filter((c) => (!q.type || c.type === q.type) && (!q.status || c.status === q.status)).filter(
+      (c) => !needle || c.id.toLowerCase().includes(needle) || c.title.toLowerCase().includes(needle) || c.body.toLowerCase().includes(needle)
+    ).sort((a, b) => a.id.localeCompare(b.id)).slice(0, q.limit ?? 50);
+  }
   /** Find claims by exact id, else case-insensitive id/title substring (fuzzy handles). */
   resolveClaims(query) {
     const all = this.list();
@@ -4626,7 +4641,11 @@ Marked reviewed through ${head}.`);
     break;
   }
   case "list": {
-    for (const c of getStore().list()) {
+    const q = { query: flag("query"), type: flag("type"), status: flag("status") };
+    const n = flag("limit");
+    const store = getStore();
+    const rows = q.query || q.type || q.status || n ? store.search({ ...q, limit: n ? Number(n) : void 0 }) : store.list();
+    for (const c of rows) {
       console.log(`[${c.status.padStart(12)}] ${c.type.padStart(20)}  ${c.id.padEnd(8)}  ${c.title}`);
     }
     break;
@@ -4674,7 +4693,7 @@ Marked reviewed through ${head}.`);
   continuity mission "the mission" [--reason "why it changed"]
   continuity review [--accept]          (semantic diff of what capture wrote)
   continuity migrate                    (rewrite all claims at the current schema)
-  continuity list
+  continuity list [--query <text>] [--type <type>] [--status <status>] [--limit <n>]
   continuity log
   continuity rollback <commit-ref>
 

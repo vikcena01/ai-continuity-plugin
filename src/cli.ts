@@ -248,7 +248,14 @@ switch (cmd) {
   }
 
   case "list": {
-    for (const c of getStore().list()) {
+    // Same filters as the search_claims tool, so the two surfaces agree.
+    const q = { query: flag("query"), type: flag("type"), status: flag("status") };
+    const n = flag("limit");
+    const store = getStore();
+    const rows = q.query || q.type || q.status || n
+      ? store.search({ ...q, limit: n ? Number(n) : undefined })
+      : store.list();
+    for (const c of rows) {
       console.log(`[${c.status.padStart(12)}] ${c.type.padStart(20)}  ${c.id.padEnd(8)}  ${c.title}`);
     }
     break;
@@ -300,7 +307,7 @@ switch (cmd) {
   continuity mission "the mission" [--reason "why it changed"]
   continuity review [--accept]          (semantic diff of what capture wrote)
   continuity migrate                    (rewrite all claims at the current schema)
-  continuity list
+  continuity list [--query <text>] [--type <type>] [--status <status>] [--limit <n>]
   continuity log
   continuity rollback <commit-ref>
 

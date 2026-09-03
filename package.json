@@ -1,6 +1,6 @@
 {
   "name": "continuity",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Durable project state across AI sessions: decisions, constraints, and rejected paths, versioned in git as plain markdown. Not a memory tool — it answers what is true about the project now, and what must not change.",
   "license": "MIT",
   "repository": {
@@ -27,7 +27,7 @@
     "build": "npm run typecheck && npm run bundle",
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/mcp.ts",
-    "test": "npm run build && bash test/smoke.sh && bash test/reconcile.sh && bash test/risks.sh && bash test/resolve.sh && bash test/schema.sh && bash test/budget.sh && bash test/review.sh && bash test/churn.sh && bash test/mission.sh"
+    "test": "npm run build && bash test/smoke.sh && bash test/reconcile.sh && bash test/risks.sh && bash test/resolve.sh && bash test/schema.sh && bash test/budget.sh && bash test/review.sh && bash test/churn.sh && bash test/mission.sh && bash test/search.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.4.0",

@@ -24959,6 +24959,21 @@ var Store = class _Store {
     const p = join(this.claimsDir(), `${id}.md`);
     return existsSync(p) ? parseClaim(readFileSync(p, "utf8"), `${id}.md`) : void 0;
   }
+  /**
+   * List or search claims. The MCP surface previously exposed only the budgeted
+   * projection (rk19rn), so an agent could not reach a claim the projection had
+   * trimmed — which is exactly when it needs to.
+   *
+   * Searches id, title AND body, because a claim is often remembered by a detail
+   * in its reasoning rather than its title. Returns claims sorted by id so the
+   * same query always yields the same order (d9).
+   */
+  search(q = {}) {
+    const needle = q.query?.trim().toLowerCase();
+    return this.list().filter((c) => (!q.type || c.type === q.type) && (!q.status || c.status === q.status)).filter(
+      (c) => !needle || c.id.toLowerCase().includes(needle) || c.title.toLowerCase().includes(needle) || c.body.toLowerCase().includes(needle)
+    ).sort((a, b) => a.id.localeCompare(b.id)).slice(0, q.limit ?? 50);
+  }
   /** Find claims by exact id, else case-insensitive id/title substring (fuzzy handles). */
   resolveClaims(query) {
     const all = this.list();
@@ -25514,7 +25529,7 @@ function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
 }
 var server = new McpServer(
-  { name: "continuity", version: "1.3.0" },
+  { name: "continuity", version: "1.4.0" },
   {
     instructions: "Continuity maintains durable, versioned project state across sessions. At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open or re-propose them. As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection. Two shapes are missed most often and are worth watching for: FRAMING statements that set strategy or what matters ('X is the moat', 'Y is the real bottleneck') belong as a decision; and STANDING INSTRUCTIONS about how to operate or who decides ('never do X without asking', 'you have full ownership') belong as a CONSTRAINT, not a question, because a question reads as an open topic rather than a rule. (capture is autonomous \u2014 no need to ask permission). Capture SPARINGLY: only what a future session could not re-derive, never restatements of existing claims or progress narration, and keep bodies short because they are re-read every session. Prefer superseding an existing claim over adding a near-duplicate. Only call freeze_claim when the user explicitly wants something locked as unchangeable. If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason."
   }
@@ -25560,10 +25575,34 @@ server.registerTool(
   async ({ project: project2 }) => text(renderFor(resolveStore(project2)))
 );
 server.registerTool(
+  "search_claims",
+  {
+    title: "Search claims",
+    description: "List or search the claim set directly, bypassing the resume projection. Read-only. Returns one compact line per claim \u2014 status, type, id, title \u2014 without bodies, so it stays cheap to call; use `why` for one claim's detail. Reach for this when the projection is not enough: it is budgeted, so at tighter budgets bodies are dropped and open questions can be omitted entirely, and it never shows superseded, rejected or resolved claims at all. Those are exactly the ones worth checking before re-proposing something. With no arguments it lists everything, newest ids last; `query` matches case-insensitively against id, title AND body, since a claim is often remembered by a detail in its reasoning rather than its title.",
+    inputSchema: {
+      project: external_exports.string().optional().describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      query: external_exports.string().optional().describe("Case-insensitive substring matched against id, title and body. Omit to list everything. A distinctive few words work better than a long phrase, since this is substring matching and not semantic search."),
+      type: external_exports.string().optional().describe("Filter to one claim type: decision, constraint, architecture, question, risk, milestone, next_action, requirement, hypothesis, experiment, mission, rejected_alternative."),
+      status: external_exports.string().optional().describe("Filter to one status: accepted, active, frozen, open, superseded, rejected, needs_review, resolved, done. Use 'superseded' or 'rejected' to see what was deliberately set aside \u2014 those never appear in the projection."),
+      limit: external_exports.number().optional().describe("Maximum results, default 50. Raise it only when a broad listing is genuinely needed; the point of this tool is to stay cheaper than the projection.")
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ project: project2, query, type, status, limit }) => {
+    const s = resolveStore(project2);
+    const found = s.search({ query, type, status, limit });
+    if (!found.length) return text("No claims match.");
+    const lines = found.map((c) => `[${c.status}] ${c.type} ${c.id} \u2014 ${c.title}`);
+    const total = s.list().length;
+    return text(`${found.length} of ${total} claims:
+${lines.join("\n")}`);
+  }
+);
+server.registerTool(
   "record_decision",
   {
     title: "Record decision",
-    description: "Append a decision the user has settled. Writes one markdown file plus a git commit; nothing is overwritten or removed, so a mistaken entry is corrected by superseding it rather than by editing. The decision then appears in every future resume context. Capture autonomously as you observe it \u2014 no permission needed \u2014 but only for things a future session could not re-derive; skip restatements and progress narration.",
+    description: "Append a decision the user has settled. Writes one markdown file plus a git commit; nothing is overwritten or removed, so a mistaken entry is corrected by superseding it rather than by editing. Capture autonomously as you observe it \u2014 no permission needed \u2014 but only for things a future session could not re-derive; skip restatements and progress narration. How the parameters divide the work: `title` survives every future projection intact, while `body` is clipped and, under a tight budget, dropped entirely \u2014 so anything that MUST reach a future session belongs in the title, not the body. `confidence` is rendered beside the claim, so 'tentative' visibly flags an inference a later session should verify before relying on it; leave it unset and it defaults to tentative. One behavioural warning: this writes STRAIGHT to the store and does not go through the reconciler, so it neither de-duplicates nor parks conflicts with frozen claims. Calling it twice with the same title creates two claims. Prefer `capture` when a turn produced more than one thing, or when the claim might duplicate or contradict an existing one.",
     inputSchema: {
       project: external_exports.string().optional().describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
       title: external_exports.string().describe("One crisp fact, phrased as a statement. This exact text appears in every future resume context, so make it self-contained."),

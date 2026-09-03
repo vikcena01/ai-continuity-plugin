@@ -156,6 +156,29 @@ export class Store {
     return existsSync(p) ? parseClaim(readFileSync(p, "utf8"), `${id}.md`) : undefined;
   }
 
+  /**
+   * List or search claims. The MCP surface previously exposed only the budgeted
+   * projection (rk19rn), so an agent could not reach a claim the projection had
+   * trimmed — which is exactly when it needs to.
+   *
+   * Searches id, title AND body, because a claim is often remembered by a detail
+   * in its reasoning rather than its title. Returns claims sorted by id so the
+   * same query always yields the same order (d9).
+   */
+  search(q: { query?: string; type?: string; status?: string; limit?: number } = {}): Claim[] {
+    const needle = q.query?.trim().toLowerCase();
+    return this.list()
+      .filter((c) => (!q.type || c.type === q.type) && (!q.status || c.status === q.status))
+      .filter((c) =>
+        !needle ||
+        c.id.toLowerCase().includes(needle) ||
+        c.title.toLowerCase().includes(needle) ||
+        c.body.toLowerCase().includes(needle),
+      )
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .slice(0, q.limit ?? 50);
+  }
+
   /** Find claims by exact id, else case-insensitive id/title substring (fuzzy handles). */
   resolveClaims(query: string): Claim[] {
     const all = this.list();

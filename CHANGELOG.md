@@ -4,6 +4,24 @@ Every release so far keeps **claim-file schema 1**, so state written by any
 version reads in every other. See [The claim format](README.md#the-claim-format-a-contract)
 for the stability promise.
 
+## v1.4.0 — 2026-09-03
+
+**`search_claims`** — the claim set is now reachable directly, not only through
+the resume projection. The projection is budgeted, so under a tight budget bodies
+are dropped and open questions omitted; and it never shows superseded, rejected
+or resolved claims at all, which are exactly the ones worth checking before
+re-proposing something. Searches id, title **and** body, because a claim is often
+remembered by a detail in its reasoning. `continuity list` gained the same
+`--query` / `--type` / `--status` / `--limit` filters, so both surfaces agree.
+
+Also disclosed rather than changed: **the individual `record_*` tools bypass the
+reconciler**, so they neither de-duplicate nor park conflicts with frozen claims —
+calling `record_decision` twice with the same title creates two claims, where
+`capture` would skip it. That was true since 1.0 and undocumented. Their
+descriptions now say so, and explain how `title` and `body` divide the work:
+`title` survives every projection, `body` may be trimmed, so anything that must
+reach a future session belongs in the title.
+
 ## v1.3.0 — 2026-09-03
 
 **`record_mission`** closes the one gap in the tool surface. The mission is the

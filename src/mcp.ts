@@ -35,7 +35,7 @@ function save(s: Store, msg: string): void {
 }
 
 const server = new McpServer(
-  { name: "continuity", version: "1.3.0" },
+  { name: "continuity", version: "1.4.0" },
   {
     instructions:
       "Continuity maintains durable, versioned project state across sessions. " +
@@ -115,15 +115,69 @@ server.registerTool(
 );
 
 server.registerTool(
+  "search_claims",
+  {
+    title: "Search claims",
+    description:
+      "List or search the claim set directly, bypassing the resume projection. Read-only. Returns one compact " +
+      "line per claim \u2014 status, type, id, title \u2014 without bodies, so it stays cheap to call; use `why` for one " +
+      "claim's detail. Reach for this when the projection is not enough: it is budgeted, so at tighter budgets " +
+      "bodies are dropped and open questions can be omitted entirely, and it never shows superseded, rejected " +
+      "or resolved claims at all. Those are exactly the ones worth checking before re-proposing something. " +
+      "With no arguments it lists everything, newest ids last; `query` matches case-insensitively against id, " +
+      "title AND body, since a claim is often remembered by a detail in its reasoning rather than its title.",
+    inputSchema: {
+      project: z
+        .string()
+        .optional()
+        .describe("Named project in the central store. Omit inside a repo that has .continuity/, where state is found by walking up from the working directory."),
+      query: z
+        .string()
+        .optional()
+        .describe("Case-insensitive substring matched against id, title and body. Omit to list everything. A distinctive few words work better than a long phrase, since this is substring matching and not semantic search."),
+      type: z
+        .string()
+        .optional()
+        .describe("Filter to one claim type: decision, constraint, architecture, question, risk, milestone, next_action, requirement, hypothesis, experiment, mission, rejected_alternative."),
+      status: z
+        .string()
+        .optional()
+        .describe("Filter to one status: accepted, active, frozen, open, superseded, rejected, needs_review, resolved, done. Use 'superseded' or 'rejected' to see what was deliberately set aside \u2014 those never appear in the projection."),
+      limit: z
+        .number()
+        .optional()
+        .describe("Maximum results, default 50. Raise it only when a broad listing is genuinely needed; the point of this tool is to stay cheaper than the projection."),
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ project, query, type, status, limit }) => {
+    const s = resolveStore(project);
+    const found = s.search({ query, type, status, limit });
+    if (!found.length) return text("No claims match.");
+    const lines = found.map((c) => `[${c.status}] ${c.type} ${c.id} — ${c.title}`);
+    const total = s.list().length;
+    return text(`${found.length} of ${total} claims:\n${lines.join("\n")}`);
+  },
+);
+
+server.registerTool(
   "record_decision",
   {
     title: "Record decision",
     description:
       "Append a decision the user has settled. Writes one markdown file plus a git commit; nothing is " +
-      "overwritten or removed, so a mistaken entry is corrected by superseding it rather than by editing. The " +
-      "decision then appears in every future resume context. Capture autonomously as you observe it — no " +
-      "permission needed — but only for things a future session could not re-derive; skip restatements and " +
-      "progress narration.",
+      "overwritten or removed, so a mistaken entry is corrected by superseding it rather than by editing. " +
+      "Capture autonomously as you observe it \u2014 no permission needed \u2014 but only for things a future session " +
+      "could not re-derive; skip restatements and progress narration. " +
+      "How the parameters divide the work: `title` survives every future projection intact, while `body` is " +
+      "clipped and, under a tight budget, dropped entirely \u2014 so anything that MUST reach a future session " +
+      "belongs in the title, not the body. `confidence` is rendered beside the claim, so 'tentative' visibly " +
+      "flags an inference a later session should verify before relying on it; leave it unset and it defaults " +
+      "to tentative. " +
+      "One behavioural warning: this writes STRAIGHT to the store and does not go through the reconciler, so " +
+      "it neither de-duplicates nor parks conflicts with frozen claims. Calling it twice with the same title " +
+      "creates two claims. Prefer `capture` when a turn produced more than one thing, or when the claim might " +
+      "duplicate or contradict an existing one.",
     inputSchema: {
       project: z
       .string()
