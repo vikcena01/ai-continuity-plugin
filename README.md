@@ -169,7 +169,7 @@ It catches hand edits as well as tool writes, and the resume context tells you w
 
 ## Status
 
-**v1.0 — deterministic core + CLI + MCP server + Claude Code plugin.** Versioned claim files, collision-safe ids, fuzzy lookup, a budgeted resume projection, git-backed event log, and 124 assertions across seven suites (`npm test`).
+**v1.1 — deterministic core + CLI + MCP server + Claude Code plugin.** Versioned claim files, collision-safe ids, fuzzy lookup, a budgeted resume projection, git-backed event log, and 125 assertions across seven suites (`npm test`).
 
 Working today:
 

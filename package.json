@@ -1,6 +1,6 @@
 {
   "name": "continuity",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Durable project state across AI sessions: decisions, constraints, and rejected paths, versioned in git as plain markdown. Not a memory tool — it answers what is true about the project now, and what must not change.",
   "license": "MIT",
   "repository": {
