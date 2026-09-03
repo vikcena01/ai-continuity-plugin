@@ -1,0 +1,7 @@
+node_modules/
+.git/
+.continuity/
+poc/
+test/
+src/
+*.md
