@@ -14,6 +14,7 @@
   <a href="#use-it-in-claude-desktop-mcp"><img src="https://img.shields.io/badge/MCP-server-8b5cf6" alt="MCP server"></a>
   <a href="https://github.com/vikcena01/ai-continuity-plugin/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vikcena01/ai-continuity-plugin/ci.yml?branch=main&label=ci" alt="CI"></a>
   <a href="package.json"><img src="https://img.shields.io/badge/dependencies-zero-3fb950" alt="Zero dependencies"></a>
+  <a href="https://glama.ai/mcp/servers/vikcena01/ai-continuity-plugin"><img src="https://glama.ai/mcp/servers/vikcena01/ai-continuity-plugin/badges/score.svg" alt="Glama score"></a>
 </p>
 
 ---
