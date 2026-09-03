@@ -5,16 +5,20 @@ type: next_action
 title: >-
   Glama is deployable as-is at a731eb6 — do NOT empty the build steps; then
   install + Cowork checks
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T05:15:35.512Z'
 supersedes:
   - n24s0
-superseded_by: null
+superseded_by: n26i9
 depends_on: []
 tags: []
+superseded_reason: >-
+  The previous version said to deploy the spec as-is, which would send a future
+  session into a fourth identical failure. The blocker moved from our repo to
+  their infrastructure, and that changes the action from deploy to report.
 ---
 
 GLAMA — deploy the current spec unchanged at a731eb6 or later; index.js (2a88fd6) fixed the ERR_MODULE_NOT_FOUND. Their CMD is mcp-proxy -- tsx index.js.
