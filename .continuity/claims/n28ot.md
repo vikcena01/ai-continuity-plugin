@@ -5,16 +5,19 @@ type: next_action
 title: >-
   Glama released at 1.1.0 (67%) — only three things left, all needing a fresh
   session or an app
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T05:31:00.863Z'
 supersedes:
   - n27km
-superseded_by: null
+superseded_by: n29v0
 depends_on: []
 tags: []
+superseded_reason: >-
+  The Glama thread closed completely, so the direction should stop carrying it
+  and name only what is actually outstanding.
 ---
 
 DONE 2026-09-03: Glama deployed at ee8fd85 and released as 1.1.0. Score 25% -> 67%; Glama Release, glama.json and Maintenance (grade B) now pass. Do NOT redeploy or re-release.
