@@ -1,0 +1,57 @@
+name: Bug — something is broken
+description: Crashes, wrong output, install failures, anything that isn't about capture accuracy.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got. Paste the error if there is one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: >-
+        Exact commands if you can. A throwaway project works well:
+        `CONTINUITY_HOME=$(mktemp -d) continuity init "test" --project t`
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "1.4.0"
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: OS and Node version
+      description: "`node --version`, and whether you're on macOS, Linux or Windows."
+      placeholder: "macOS 15, node 22.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode
+      description: Repo mode keeps state in the project; central mode keeps it under ~/.continuity.
+      options:
+        - Repo mode (a .continuity/ directory in my project)
+        - Central mode (a named project under ~/.continuity/projects)
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before filing
+      options:
+        - label: "`npm test` passes on a clean clone (or I couldn't run it)"
+        - label: I redacted anything private from the pasted output

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How claims are stored and versioned
+    url: https://github.com/vikcena01/ai-continuity-plugin#the-claim-format-a-contract
+    about: The file format, the id scheme, and the compatibility promise across versions.
+  - name: Reviewing what capture wrote
+    url: https://github.com/vikcena01/ai-continuity-plugin#reviewing-what-was-captured
+    about: "`continuity review` shows a semantic diff of what was recorded and why — often answers it faster than an issue."

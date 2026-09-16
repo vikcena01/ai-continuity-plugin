@@ -1,0 +1,70 @@
+name: Capture problem — something was recorded wrong, or not at all
+description: The most useful report you can file. Capture accuracy is the project's biggest open question.
+labels: ["capture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Capture decides what becomes durable project state, and whether it judges that
+        correctly is the project's largest unanswered question. A report here is worth
+        more than a feature request — it is a real sample from a real session, which is
+        something the maintainer cannot generate alone.
+
+        **Please redact anything private before pasting.** Claims and conversations can
+        contain client names, internal architecture, or credentials paths.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - Something should have been captured and wasn't (false negative)
+        - Something was captured that shouldn't have been (false positive)
+        - The right thing was captured, but as the wrong type or status (misclassified)
+        - It was captured correctly but the reasoning attached is wrong
+        - Not sure — the state just looks wrong
+    validations:
+      required: true
+
+  - type: textarea
+    id: conversation
+    attributes:
+      label: What was said
+      description: >-
+        The part of the conversation that should have produced a claim, or that wrongly
+        produced one. A few lines is usually enough — the exact wording matters more
+        than the length, because capture keys off phrasing.
+      placeholder: |
+        Me: let's not use Redis, the ops overhead isn't worth it at our volume
+        Claude: understood, I'll design around Postgres instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: recorded
+    attributes:
+      label: What Continuity actually recorded
+      description: >-
+        Run `continuity list --query "<a distinctive word>"`, or paste the relevant claim
+        file from `.continuity/claims/`. If the answer is "nothing", say so — that is the
+        single most valuable case, and the one an audit of stored claims can never find.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should have recorded
+      description: In your words. A rough sentence is fine; no need to guess at claim types.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From `claude plugin list`, or the `version` field in the plugin's package.json.
+      placeholder: "1.4.0"
+    validations:
+      required: true
