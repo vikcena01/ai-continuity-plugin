@@ -5,16 +5,20 @@ type: milestone
 title: >-
   v1.3.0 is public and listed at 100% on Glama — remaining work is validation by
   real users
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T09:20:42.592Z'
 supersedes:
   - m3nc
-superseded_by: null
+superseded_by: m5sw
 depends_on: []
 tags: []
+superseded_reason: >-
+  The previous milestone said 'v1.3.0 is public, remaining work is validation by
+  real users'; the community review has since passed and 1.4.0 shipped, so the
+  blocker it implied no longer exists.
 ---
 
 Shipped: v1.3.0 on GitHub and Glama, 100% score, Coherence A, Tool Definition Quality A at 4.5/5 across 12 tools. 164 assertions, nine suites, CI green. Claude community submission still in review.
