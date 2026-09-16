@@ -5,15 +5,20 @@ type: constraint
 title: >-
   To check which release Glama is actually serving, count its tools — its
   version field is not a version
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-16T07:08:02.341Z'
 supersedes: []
-superseded_by: null
+superseded_by: c20o4
 depends_on: []
 tags: []
+superseded_reason: >-
+  The first version of this rule said 'count its tools' without saying where,
+  and that ambiguity immediately produced a false conclusion: a substring search
+  for tool names over the page matched the README, which names every tool
+  including ones not yet deployed.
 reason: >-
   Its 'Latest release' field renders the README's status line verbatim, so it
   reports whatever the README says rather than what was deployed; this produced
