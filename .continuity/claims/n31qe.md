@@ -2,13 +2,15 @@
 schema: 1
 id: n31qe
 type: next_action
-title: v1.4.0 is tagged but not deployed — three things pending on the user
+title: >-
+  Nothing is blocked — three things pending on you, all needing something a
+  terminal cannot do
 status: open
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T09:21:48.317Z'
-  updated: '2026-09-03T09:29:09.656Z'
+  updated: '2026-09-16T07:04:11.173Z'
 supersedes:
   - n30lb
 superseded_by: null
@@ -16,13 +18,10 @@ depends_on: []
 tags: []
 ---
 
-PENDING ON YOU, none doable from a terminal:
-1. SHOW HN — title and first comment drafted in conversation; HN was throttling posts. Retry a weekday morning US time.
-2. COWORK APP — answer q8w6 by installing there.
-3. REVIEW BASELINE — 131 claims, no marker. Read `continuity list`, then `continuity review --accept`.
+1. SHOW HN — title and first comment drafted in conversation; HN was throttling submissions. Retry a weekday morning US time.
+2. COWORK APP — answer q8w6 by installing there rather than reasoning about it.
+3. REVIEW BASELINE — 134 claims, no marker. Read `continuity list`, then `continuity review --accept`. Accepting without reading defeats the point.
 
-OPTIONAL: deploy v1.4.0 (ed08a51) on Glama. It adds a 13th tool, so Coherence would re-score — its Completeness note specifically cited the missing claim search, which is now closed. Last deploy of 1.3.0 scored 100%, Coherence A, TDQ A 4.5/5, why 3.9 -> 4.7, record_mission 4.9.
+OPTIONAL: deploy v1.4.0 (ed08a51) on Glama — adds a 13th tool, so Coherence re-scores; its Completeness note had cited the missing claim search, now closed.
 
-DONE in 1.4.0: search_claims (rk19rn), and the record_* reconciler bypass is now disclosed — see rk20 for whether that bypass should be fixed rather than merely documented.
-
-Waiting: Claude community submission in review — poll, never infer from absence.
+NOT blocked and NOT waiting: the community submission passed review, and the direct marketplace install works today at v1.4.0 (d37lc). If @claude-community still does not list it, that is their catalogue being stale since 2026-08-24, not a rejection.
