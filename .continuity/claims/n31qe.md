@@ -3,14 +3,14 @@ schema: 1
 id: n31qe
 type: next_action
 title: >-
-  HN is account-filtered, not content-rejected — stop commenting, the real work
-  is the external tester
+  v1.5.0 is live everywhere — reply to the external tester, and ask which
+  channel he came from
 status: open
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-03T09:21:48.317Z'
-  updated: '2026-09-18T07:22:11.120Z'
+  updated: '2026-09-18T07:24:39.839Z'
 supersedes:
   - n30lb
 superseded_by: null
@@ -18,12 +18,10 @@ depends_on: []
 tags: []
 ---
 
-HN STATE 2026-09-18: story 49750016 ALIVE, score 3, zero visible comments. Comments 49750022 (03:57) and 49751150 (07:20) both dead — two different comments, hours apart, one without links, from a 15-day-old 2-karma account. That is an account-level filter; the story rising while comments die rules out the community disliking the project.
+v1.5.0 DEPLOYED, confirmed via the page's latestRelease.version field (c23yd). The frozen-guard fail-open is no longer in anyone's hands.
 
-DO NOT post a third comment, repost the story, or use another account. Repeated posting after kills reads as filter evasion and risks the story, which is currently the only surviving asset. Follow up once on the existing moderator email naming both killed comment ids, say you will stop posting until they reply, then stop.
+1. REPLY to Carl Sowers (EuphoricDoom). Say the fix shipped as v1.5.0, accept the compact reproduction report, the command transcript and the acceptance cases. ALSO ASK WHERE HE FOUND IT — his mail does not say, and there are three live channels (Glama listing, the flagged HN post, the direct marketplace) with zero data on which produces engagement. One sentence answers a question nothing else can.
+2. COWORK APP — answer q8w6 by installing there.
+3. REVIEW BASELINE — 139 claims, no marker. `continuity list`, then `continuity review --accept`.
 
-Check restoration by API, not the page: curl -s https://hacker-news.firebaseio.com/v0/item/49751150.json | grep -c dead — 1 still killed, 0 restored.
-
-The higher-value thread is elsewhere: reply to Carl Sowers (EuphoricDoom) and request the full report. One cold-read external test produced a real fail-open plus two provenance defects; HN has produced none.
-
-Also pending: deploy v1.5.0 (70071ab) — a security fix should not sit behind 1.4.0; q8w6 via the Cowork app; and the review baseline, 139 claims with no marker.
+HN: story 49750016 alive at 3 points, both author comments killed by an account-level filter. Emailed the moderators; do not post again, repost, or use another account while waiting.
