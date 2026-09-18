@@ -2,13 +2,15 @@
 schema: 1
 id: n33pl
 type: next_action
-title: LinkedIn post drafted — waiting on which angle to run
+title: >-
+  Reply to Carl — and ask him to file it as a GitHub issue, not just which
+  channel he came from
 status: open
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-18T07:56:13.318Z'
-  updated: '2026-09-18T08:45:27.860Z'
+  updated: '2026-09-18T09:05:55.162Z'
 supersedes:
   - n31qe
 superseded_by: null
@@ -16,4 +18,4 @@ depends_on: []
 tags: []
 ---
 
-Drafted the six-weeks-on-1.1.1 story (recommended, rk22bb is the material). Alternatives offered: the thesis post, or a plain launch post. Then still open: (1) REPLY to Carl Sowers — frozen-guard fix is v1.5.0 — and ASK WHERE HE FOUND THE PLUGIN. (2) Cowork (q8w6). (3) Review baseline. RESTART NEEDED for the session to run 1.5.1 (c24o7). HN 49750016 still awaiting a moderator — do not repost.
+One mail, three jobs: (1) the frozen-guard fix shipped as v1.5.0; (2) ASK WHERE HE FOUND THE PLUGIN — three live channels, no data; (3) ask him to file the report as an issue so the turnaround is visible (c-constraint above). Then: LinkedIn angle pending (draft written, rk22bb is the material), Cowork q8w6, review baseline. RESTART NEEDED to run 1.5.1. HN 49750016 awaiting a moderator — do not repost.
