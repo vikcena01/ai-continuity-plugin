@@ -2,14 +2,13 @@
 schema: 1
 id: n33pl
 type: next_action
-title: >-
-  v1.5.1 shipped — SKILL.md now matches the Stop hook, and the suite asserts
-  they agree
+title: LinkedIn post drafted — waiting on which angle to run
 status: open
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-18T07:56:13.318Z'
+  updated: '2026-09-18T08:45:27.860Z'
 supersedes:
   - n31qe
 superseded_by: null
@@ -17,4 +16,4 @@ depends_on: []
 tags: []
 ---
 
-Next: (1) REPLY to Carl Sowers (EuphoricDoom) — the frozen-guard fix is v1.5.0 — and ASK WHERE HE FOUND THE PLUGIN; three live channels (Glama, the flagged HN post, the marketplace) and no data on which produces engagement. (2) Cowork (q8w6). (3) Review baseline: continuity list, then continuity review --accept. HN 49750016 still awaiting a moderator reply — do not repost or use another account.
+Drafted the six-weeks-on-1.1.1 story (recommended, rk22bb is the material). Alternatives offered: the thesis post, or a plain launch post. Then still open: (1) REPLY to Carl Sowers — frozen-guard fix is v1.5.0 — and ASK WHERE HE FOUND THE PLUGIN. (2) Cowork (q8w6). (3) Review baseline. RESTART NEEDED for the session to run 1.5.1 (c24o7). HN 49750016 still awaiting a moderator — do not repost.
