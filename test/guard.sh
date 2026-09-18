@@ -78,6 +78,21 @@ o6="$(C capture --file "$TMP/good.json" --project g)"
 ok "with reasons, both are accepted"      '! echo "$o6" | grep -q "\"applied\": \[\]"'
 ok "and the reason travels (d10)"         'C why "Use GraphQL" --project g | grep -q "one round trip"'
 
+
+# --- the skill must not contradict the hook (both are model-facing instructions) ---
+SKILL="$ROOT/skills/continuity/SKILL.md"
+HOOK="$ROOT/src/hook-stop-capture.ts"
+ok "skill says default to capturing nothing" 'grep -q "Default to capturing NOTHING" "$SKILL"'
+ok "hook says the same"                      'grep -q "Default to capturing NOTHING" "$HOOK"'
+ok "skill no longer says err toward capturing" '! grep -q "err toward capturing" "$SKILL"'
+ok "skill names the framing category"        'grep -q "FRAMING" "$SKILL"'
+ok "skill routes standing instructions"      'grep -qi "standing instruction" "$SKILL"'
+ok "skill documents every shipped tool" '
+  for t in record_decision record_constraint record_rejection record_open record_mission \
+           capture freeze_claim resolve_claim search_claims why resume_context create_project; do
+    grep -q "$t" "$SKILL" || exit 1
+  done'
+
 echo ""
 echo "guard: $pass passed, $fail failed"
 rm -rf "$TMP"

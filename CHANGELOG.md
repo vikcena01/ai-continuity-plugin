@@ -4,6 +4,22 @@ Every release so far keeps **claim-file schema 1**, so state written by any
 version reads in every other. See [The claim format](README.md#the-claim-format-a-contract)
 for the stability promise.
 
+## v1.5.1 — 2026-09-18
+
+**The skill contradicted the hook.** `SKILL.md` still said *"err toward capturing
+rather than skipping"* — the guidance from 1.0 — while the Stop hook and the MCP
+server had said *"default to capturing NOTHING"* since 1.2.0. The skill is what a
+model reads, so any client loading it was being told the opposite of the shipped
+policy, which is precisely the over-capture that 1.2.0 fixed.
+
+It now matches: the conservative default, the framing and standing-instruction
+categories, the rule that discussion is not decision, and the tools added since
+1.0 (`record_mission`, `resolve_claim`, `search_claims`). The test suite now
+asserts the skill and the hook agree, so they cannot drift apart again silently.
+
+Found because a third-party directory published the skill body where it could be
+read side by side with the hook.
+
 ## v1.5.0 — 2026-09-18
 
 **Security fix: the frozen guard failed open on an ambiguous reference.** A

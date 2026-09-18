@@ -18,18 +18,38 @@ Call `resume_context` (pass `project` if the user names one). Treat the result a
 If nothing is returned and the work is clearly a new ongoing project, offer to `create_project`.
 
 ## While working — capture autonomously (do not ask permission)
-As the conversation produces durable facts, record them right away:
+**Default to capturing NOTHING. Most turns warrant nothing.** Record only what a future
+session could not re-derive, in one of these shapes:
 - A decision the user settles on → `record_decision` (include the reasoning in the body).
 - A constraint future work must respect → `record_constraint`.
-- An alternative considered and rejected → `record_rejection` **with the reason**.
+- An alternative considered and rejected → `record_rejection` **with the reason**. A rejection
+  without a reason is refused: the reason is what stops it being re-proposed.
 - An open question, risk, milestone, or next action → `record_open`.
-Keep each claim to one crisp fact. Capture is non-destructive and reviewed later via git,
-so err toward capturing rather than skipping. Do not capture idle chatter — only things a
-future session would need to continue correctly.
+- **FRAMING** — a statement setting strategy or what matters ("X is the moat", "Y is the real
+  bottleneck"). These do not look like decisions and are the most commonly missed. Record as a
+  decision.
+- **A STANDING INSTRUCTION** about how to operate or who decides ("never do X without asking",
+  "you have full ownership"). Record as a **constraint**, never as a question — a question reads
+  as an open topic rather than a rule to obey.
+
+Do NOT record: your own explanations, restatements of existing claims, progress narration, or a
+rewrite of the next step unless the next step actually changed. Prefer superseding an existing
+claim over adding a near-duplicate, and keep bodies short — they are re-read in every future
+session. If in doubt, stop without capturing.
+
+Discussion is not decision, and agreement between assistants is not approval. Only the user's
+commitment makes something durable project state.
+
+For several claims at once prefer `capture`, which de-duplicates and parks anything contradicting
+a frozen claim. The individual `record_*` tools write straight through and do neither.
 
 ## Deliberate acts — only on explicit user request
 - "freeze X" / "lock X" → `freeze_claim`.
 - "why did we change X?" → `why`.
+- Closing a claim → `resolve_claim`, always with a reason.
+- Setting or changing the mission → `record_mission`; replacing one needs a reason.
+- Finding a claim the resume context does not show → `search_claims`. The projection is budgeted
+  and never lists superseded, rejected or resolved claims.
 
 ## Principles
 - **Record the REASON**, not just the decision — a future session must know *why* a path was
