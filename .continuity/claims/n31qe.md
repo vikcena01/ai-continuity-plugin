@@ -5,7 +5,7 @@ type: next_action
 title: >-
   v1.5.0 is live everywhere — reply to the external tester, and ask which
   channel he came from
-status: open
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
@@ -13,9 +13,12 @@ provenance:
   updated: '2026-09-18T07:24:39.839Z'
 supersedes:
   - n30lb
-superseded_by: null
+superseded_by: n33pl
 depends_on: []
 tags: []
+superseded_reason: >-
+  v1.5.0 direction is complete; the skill/hook contradiction found via
+  ClaudeAtlas is fixed and released.
 ---
 
 v1.5.0 DEPLOYED, confirmed via the page's latestRelease.version field (c23yd). The frozen-guard fail-open is no longer in anyone's hands.
