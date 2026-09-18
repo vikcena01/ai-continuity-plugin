@@ -74,6 +74,14 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
     const live = store.list().filter((c) => LIVE.has(c.status));
 
     if (op.op === "add" || op.op === "reject") {
+      // A rejection without a reason is inert: it lands under "Do NOT revisit" with
+      // nothing after "because:", so a future session learns that something was
+      // rejected but not why — which is exactly what lets it be re-proposed. The
+      // reason IS the guardrail (d10), so refuse rather than record a hollow one.
+      if (op.op === "reject" && !op.reason?.trim()) {
+        res.notes.push(`skipped "${op.title}": a rejection needs a reason — without it the claim cannot stop a re-proposal`);
+        continue;
+      }
       const type =
         op.op === "reject"
           ? "rejected_alternative"
@@ -86,10 +94,21 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
         continue;
       }
 
-      // frozen guard: an add flagged as conflicting with a frozen claim is parked.
+      // Frozen guard. This used to FAIL OPEN: it resolved the reference with
+      // findOne, which returns undefined when a substring matches more than one
+      // claim, and `if (target && ...)` then skipped the guard entirely — so a
+      // claim contradicting a FROZEN one applied silently, with nothing parked and
+      // no note. Reported externally 2026-09-18 and reproduced.
+      //
+      // Now it resolves ALL candidates and parks if ANY of them is frozen. An
+      // ambiguous reference must fail closed: the whole point of the guard is that
+      // freezing is the one human act (d4), so a guard that can be bypassed by an
+      // imprecise reference is not a guard.
       if (op.conflicts_with) {
-        const target = findOne(store, op.conflicts_with);
-        if (target && target.status === "frozen") {
+        const candidates = store.resolveClaims(op.conflicts_with);
+        const frozen = candidates.filter((c) => c.status === "frozen");
+        if (frozen.length) {
+          const target = frozen[0];
           const c = store.record({
             type,
             title: op.title,
@@ -100,8 +119,27 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
             origin: "auto",
             conflicts_with: target.id,
           });
-          res.parked.push(`${c.id} conflicts with FROZEN ${target.id} — parked for review`);
+          res.parked.push(
+            frozen.length === 1
+              ? `${c.id} conflicts with FROZEN ${target.id} — parked for review`
+              : `${c.id} declared a conflict matching ${frozen.length} FROZEN claims (${frozen
+                  .map((f) => f.id)
+                  .join(", ")}) — ambiguous, parked for review`,
+          );
           continue;
+        }
+        // Not frozen, but say so rather than swallowing it: a declared conflict
+        // that resolves to nothing, or to several claims, is worth surfacing.
+        if (!candidates.length) {
+          res.notes.push(
+            `"${op.title}": conflicts_with "${op.conflicts_with}" matched no claim — applied without a guard`,
+          );
+        } else if (candidates.length > 1) {
+          res.notes.push(
+            `"${op.title}": conflicts_with "${op.conflicts_with}" is ambiguous (${candidates
+              .map((c) => c.id)
+              .join(", ")}), none frozen — applied`,
+          );
         }
       }
 
@@ -121,6 +159,12 @@ export function reconcile(store: Store, ops: CaptureOp[]): CaptureResult {
       const old = op.old ? findOne(store, op.old) : undefined;
       if (!old) {
         res.notes.push(`supersede skipped: could not uniquely resolve "${op.old}"`);
+        continue;
+      }
+      if (!op.reason?.trim()) {
+        res.notes.push(
+          `skipped "${op.title}": superseding ${old.id} needs a reason — the reason a decision was replaced is what stops it being re-litigated (d10)`,
+        );
         continue;
       }
       const type = resolveType(op.type, old.type, op.title, res);

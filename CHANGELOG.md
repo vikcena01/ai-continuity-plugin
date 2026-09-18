@@ -4,6 +4,26 @@ Every release so far keeps **claim-file schema 1**, so state written by any
 version reads in every other. See [The claim format](README.md#the-claim-format-a-contract)
 for the stability promise.
 
+## v1.5.0 — 2026-09-18
+
+**Security fix: the frozen guard failed open on an ambiguous reference.** A
+capture op declaring `conflicts_with` resolved the reference with a helper that
+returns nothing when a substring matches more than one claim — so the guard was
+skipped entirely and a claim contradicting a **frozen** one applied silently,
+with nothing parked and no note. The guard now resolves every candidate and parks
+if any of them is frozen, naming each candidate id. Freezing is the one human act
+in the model, so a guard that an imprecise reference can bypass is not a guard.
+
+Reported by Carl Sowers (EuphoricDoom), who reproduced it independently against
+v1.4 without modifying the repository.
+
+Also fixed, from the same report: **provenance could be silently empty.** A
+supersession or rejection submitted without a reason was accepted, producing
+`because:` with nothing after it and a guardrail that cannot explain itself. Both
+are now refused with an explanatory note. The reason is the thing that stops a
+decision being re-litigated, so recording a hollow one is worse than recording
+nothing.
+
 ## v1.4.0 — 2026-09-03
 
 **`search_claims`** — the claim set is now reachable directly, not only through

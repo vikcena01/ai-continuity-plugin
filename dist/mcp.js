@@ -25307,6 +25307,10 @@ function reconcile(store, ops) {
   for (const op of ops) {
     const live = store.list().filter((c) => LIVE2.has(c.status));
     if (op.op === "add" || op.op === "reject") {
+      if (op.op === "reject" && !op.reason?.trim()) {
+        res.notes.push(`skipped "${op.title}": a rejection needs a reason \u2014 without it the claim cannot stop a re-proposal`);
+        continue;
+      }
       const type = op.op === "reject" ? "rejected_alternative" : resolveType(op.type, "decision", op.title, res);
       if (!type) continue;
       const dup = live.find((c2) => norm(c2.title) === norm(op.title));
@@ -25315,8 +25319,10 @@ function reconcile(store, ops) {
         continue;
       }
       if (op.conflicts_with) {
-        const target = findOne(store, op.conflicts_with);
-        if (target && target.status === "frozen") {
+        const candidates = store.resolveClaims(op.conflicts_with);
+        const frozen = candidates.filter((c2) => c2.status === "frozen");
+        if (frozen.length) {
+          const target = frozen[0];
           const c2 = store.record({
             type,
             title: op.title,
@@ -25327,8 +25333,19 @@ function reconcile(store, ops) {
             origin: "auto",
             conflicts_with: target.id
           });
-          res.parked.push(`${c2.id} conflicts with FROZEN ${target.id} \u2014 parked for review`);
+          res.parked.push(
+            frozen.length === 1 ? `${c2.id} conflicts with FROZEN ${target.id} \u2014 parked for review` : `${c2.id} declared a conflict matching ${frozen.length} FROZEN claims (${frozen.map((f) => f.id).join(", ")}) \u2014 ambiguous, parked for review`
+          );
           continue;
+        }
+        if (!candidates.length) {
+          res.notes.push(
+            `"${op.title}": conflicts_with "${op.conflicts_with}" matched no claim \u2014 applied without a guard`
+          );
+        } else if (candidates.length > 1) {
+          res.notes.push(
+            `"${op.title}": conflicts_with "${op.conflicts_with}" is ambiguous (${candidates.map((c2) => c2.id).join(", ")}), none frozen \u2014 applied`
+          );
         }
       }
       const c = store.record({
@@ -25346,6 +25363,12 @@ function reconcile(store, ops) {
       const old = op.old ? findOne(store, op.old) : void 0;
       if (!old) {
         res.notes.push(`supersede skipped: could not uniquely resolve "${op.old}"`);
+        continue;
+      }
+      if (!op.reason?.trim()) {
+        res.notes.push(
+          `skipped "${op.title}": superseding ${old.id} needs a reason \u2014 the reason a decision was replaced is what stops it being re-litigated (d10)`
+        );
         continue;
       }
       const type = resolveType(op.type, old.type, op.title, res);
@@ -25529,7 +25552,7 @@ function save(s, msg) {
   commit(s.gitDir, s.gitPath, msg);
 }
 var server = new McpServer(
-  { name: "continuity", version: "1.4.0" },
+  { name: "continuity", version: "1.5.0" },
   {
     instructions: "Continuity maintains durable, versioned project state across sessions. At the START of working on an ongoing project, call resume_context (pass `project` if the user names one) and honor it: treat FROZEN items and rejected alternatives as authoritative \u2014 do not re-open or re-propose them. As the user makes decisions, sets constraints, or rejects alternatives, capture them with record_decision / record_constraint / record_rejection. Two shapes are missed most often and are worth watching for: FRAMING statements that set strategy or what matters ('X is the moat', 'Y is the real bottleneck') belong as a decision; and STANDING INSTRUCTIONS about how to operate or who decides ('never do X without asking', 'you have full ownership') belong as a CONSTRAINT, not a question, because a question reads as an open topic rather than a rule. (capture is autonomous \u2014 no need to ask permission). Capture SPARINGLY: only what a future session could not re-derive, never restatements of existing claims or progress narration, and keep bodies short because they are re-read every session. Prefer superseding an existing claim over adding a near-duplicate. Only call freeze_claim when the user explicitly wants something locked as unchangeable. If resume_context shows CONFLICTS NEEDING ATTENTION, or a risk/question there has actually been settled, close it with resolve_claim and a reason."
   }
