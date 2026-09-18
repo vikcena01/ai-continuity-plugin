@@ -5,16 +5,20 @@ type: constraint
 title: >-
   Check which release Glama serves on the /schema page, cache-busted — the
   server page renders the README and cached reads lie about freshness
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-16T07:38:26.259Z'
 supersedes:
   - c20o4
-superseded_by: null
+superseded_by: c23yd
 depends_on: []
 tags: []
+superseded_reason: >-
+  v1.5.0 changed no tools, so the tool-count method this rule prescribed could
+  not distinguish it from v1.4.0 at all; the structured field can, and works for
+  every release.
 ---
 
 Method: GET /mcp/servers/<owner>/<repo>/schema with a cache-busting query param, and count the enumerated tools. 11 = 1.1.x, 12 = 1.3.0, 13 = 1.4.0 with search_claims.
