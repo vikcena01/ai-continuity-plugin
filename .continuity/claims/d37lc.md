@@ -5,15 +5,19 @@ type: decision
 title: >-
   The Claude community submission PASSED REVIEW — distribution no longer depends
   on it
-status: accepted
+status: superseded
 confidence: confirmed
 provenance:
   origin: auto
   created: '2026-09-16T07:03:38.175Z'
 supersedes: []
-superseded_by: null
+superseded_by: d40h7
 depends_on: []
 tags: []
+superseded_reason: >-
+  d37lc asserted the submission had passed; the Console contradicted it three
+  days later, so leaving it would have a future session believe review is
+  settled.
 reason: >-
   This was the longest-open external dependency in the project, and its
   resolution changes what the remaining work is: acceptance is no longer in
